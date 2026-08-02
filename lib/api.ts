@@ -135,11 +135,17 @@ export type PendingSubmission = {
   id: string;
   assignment_id: string;
   campaign_id: string;
+  campaign_name: string;
+  objective: string;
   promoter_id: string;
+  promoter_name: string | null;
   fee: Money;
+  promised_reach: number;
+  claimed_views: number | null;
   auto_flag: boolean;
   public_url: string | null;
   note: string | null;
+  image_url: string | null;
   submitted_at: string;
   artifacts: { id: string; reuse_of_id: string | null }[];
 };
@@ -147,8 +153,10 @@ export type PendingSubmission = {
 export type PendingWithdrawal = {
   id: string;
   promoter_id: string;
+  promoter_name: string | null;
   amount: Money;
   status: string;
+  bank: { account_name: string; last4: string; bank_code: string };
   created_at: string;
 };
 
