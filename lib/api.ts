@@ -251,4 +251,51 @@ export type Offer = {
   status: string;
 };
 
+export type AdminClient = {
+  org_id: string;
+  name: string;
+  email: string;
+  industry: string | null;
+  status: string;
+  campaigns_created: number;
+  spent: Money;
+  created_at: string;
+};
+
+export type PlatformRules = {
+  rpm_minor: number;
+  take_rate_pct: number;
+  delivery_threshold_pct: number;
+  unverified_reach_cap: number;
+  proof_validity_days: number;
+  min_trust_score: number;
+  offer_expiry_hours: number;
+  withdrawal_minimum_minor: number;
+};
+
+export type AuditEntry = {
+  id: string;
+  actor: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  reason: string | null;
+  created_at: string;
+};
+
+export type TeamMember = { id: string; email: string; status: string; capabilities: Capability[] };
+
+export type StatusCount = { status: string; count: number };
+
+export type PlatformAnalytics = {
+  gmv: Money;
+  revenue: Money;
+  take_rate_pct: number;
+  live_campaigns: number;
+  active_promoters: number;
+  active_clients: number;
+  promoters_by_status: StatusCount[];
+  campaigns_by_status: StatusCount[];
+};
+
 export type AdminDecision = { id: string; status: string; message: string };
