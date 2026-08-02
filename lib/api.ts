@@ -176,4 +176,71 @@ export type ReconciliationReport = {
   payments: GatewayPayment[];
 };
 
+export type LiveCampaign = {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+  slots_total: number;
+  slots_filled: number;
+  client_name: string;
+  price: Money | null;
+};
+
+export type CampaignTargeting = {
+  states: string[];
+  lgas: string[];
+  age_min: number | null;
+  age_max: number | null;
+  genders: string[];
+  languages: string[];
+  categories: string[];
+  platforms: string[];
+  min_effective_reach: number;
+  roles: string[];
+};
+
+export type CampaignAsset = { id: string; kind: string; caption_text: string | null; file_id: string | null };
+
+export type CampaignDetail = {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+  description: string | null;
+  promoter_instructions: string | null;
+  destination_url: string | null;
+  needs_creative: boolean;
+  slots_total: number;
+  slots_filled: number;
+  price: Money | null;
+  budget: Money;
+  quoted_at: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  client: { org_id: string; name: string; industry: string | null };
+  targeting: CampaignTargeting | null;
+  assets: CampaignAsset[];
+};
+
+export type Candidate = {
+  promoter_id: string;
+  full_name: string | null;
+  location_state: string | null;
+  trust_score: number;
+  channel: { id: string; platform: string; effective_reach: number };
+  assignments_this_week: number;
+  max_campaigns_per_week: number;
+};
+
+export type Offer = {
+  id: string;
+  campaign_id: string;
+  campaign_name: string;
+  role: string;
+  fee_minor: number;
+  expires_at: string;
+  status: string;
+};
+
 export type AdminDecision = { id: string; status: string; message: string };
