@@ -1,6 +1,7 @@
 /** Small display helpers. Money arrives preformatted from the API. */
 
-export function compactNumber(n: number): string {
+export function compactNumber(n: number | null | undefined): string {
+  if (n == null || !Number.isFinite(n)) return '—';
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
   if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, '')}k`;
   return n.toLocaleString();
