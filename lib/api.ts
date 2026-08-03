@@ -239,6 +239,11 @@ export type Candidate = {
   channel: { id: string; platform: string; effective_reach: number };
   assignments_this_week: number;
   max_campaigns_per_week: number;
+  match_score: number;
+  fit_pct: number;
+  capability: number;
+  capability_tier: string;
+  reliability: number;
 };
 
 export type Offer = {

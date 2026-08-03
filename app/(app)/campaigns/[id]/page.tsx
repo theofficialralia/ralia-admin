@@ -134,6 +134,13 @@ export default function CampaignDetailPage() {
   );
 }
 
+/** Fit-score colour band, matching the §7 capability tiers. */
+function fitColor(pct: number): string {
+  if (pct >= 70) return 'text-emerald-600 dark:text-emerald-400';
+  if (pct >= 40) return 'text-amber-600 dark:text-amber-400';
+  return 'text-ink';
+}
+
 function ChipRow({ label, values }: { label: string; values: string[] }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
@@ -171,7 +178,7 @@ function Matching({ campaignId, onOffered, canReview }: { campaignId: string; on
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-extrabold text-ink">Match promoters</h2>
-          <p className="text-[12.5px] text-muted">Eligible promoters, ranked by effective reach. Select and send offers.</p>
+          <p className="text-[12.5px] text-muted">Eligible promoters, ranked by fit. Select and send offers.</p>
         </div>
         {canReview && (
           <Button onClick={() => send.mutate([...selected])} loading={send.isPending} disabled={selected.size === 0}>
@@ -200,11 +207,13 @@ function Matching({ campaignId, onOffered, canReview }: { campaignId: string; on
                 <Avatar name={c.full_name} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{c.full_name ?? 'Unnamed'}</div>
-                  <div className="truncate text-[12px] text-muted">{titleCase(c.channel.platform)} · {c.location_state ?? '—'} · trust {c.trust_score}</div>
+                  <div className="truncate text-[12px] text-muted">
+                    {titleCase(c.channel.platform)} · {c.location_state ?? '—'} · trust {c.trust_score} · {c.capability_tier}
+                  </div>
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="text-[14px] font-extrabold text-ink">{compactNumber(c.channel.effective_reach)}</div>
-                  <div className="text-[11px] text-muted">reach · {c.assignments_this_week}/{c.max_campaigns_per_week} this wk</div>
+                  <div className={`text-[15px] font-extrabold ${fitColor(c.fit_pct)}`}>{c.fit_pct}<span className="text-[10px] font-semibold text-muted"> % fit</span></div>
+                  <div className="text-[11px] text-muted">{compactNumber(c.channel.effective_reach)} reach · {c.assignments_this_week}/{c.max_campaigns_per_week} wk</div>
                 </div>
               </button>
             );
