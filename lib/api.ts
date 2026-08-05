@@ -156,10 +156,21 @@ export type PendingWithdrawal = {
   id: string;
   promoter_id: string;
   promoter_name: string | null;
+  kyc_status: string;
   amount: Money;
   status: string;
   bank: { account_name: string; last4: string; bank_code: string };
   created_at: string;
+};
+
+export type ExposureReport = {
+  promoter_payable: Money;
+  in_flight_withdrawals: Money;
+  escrow_held: Money;
+  client_wallet: Money;
+  platform_revenue: Money;
+  bank_clearing_net: Money;
+  fully_backed: boolean;
 };
 
 export type GatewayPayment = {

@@ -9,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { api, uuid, type GatewayPayment, type PendingWithdrawal, type ReconciliationReport } from '@/lib/api';
+import { api, uuid, type ExposureReport, type GatewayPayment, type PendingWithdrawal, type ReconciliationReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { relativeTime } from '@/lib/format';
 
@@ -41,37 +41,113 @@ function WithdrawalsTab() {
   const { can } = useAuth();
   const canMoney = can('RECORD_MONEY');
   const [paying, setPaying] = useState<PendingWithdrawal | null>(null);
+  const [failing, setFailing] = useState<PendingWithdrawal | null>(null);
 
   const q = useQuery({ queryKey: ['withdrawals'], queryFn: () => api.get<PendingWithdrawal[]>('/v1/admin/queues/withdrawals') });
-  const invalidate = () => { void qc.invalidateQueries({ queryKey: ['withdrawals'] }); void qc.invalidateQueries({ queryKey: ['nav-counts'] }); };
+  const exposure = useQuery({ queryKey: ['exposure'], queryFn: () => api.get<ExposureReport>('/v1/admin/finance/exposure') });
+  const invalidate = () => { void qc.invalidateQueries({ queryKey: ['withdrawals'] }); void qc.invalidateQueries({ queryKey: ['exposure'] }); void qc.invalidateQueries({ queryKey: ['nav-counts'] }); };
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/v1/admin/withdrawals/${id}/approve`, {}), onSuccess: invalidate });
+  const verifyKyc = useMutation({ mutationFn: (promoterId: string) => api.post(`/v1/admin/promoters/${promoterId}/kyc`, { status: 'VERIFIED' }), onSuccess: invalidate });
 
   if (q.isLoading) return <Loading />;
   const items = q.data ?? [];
-  if (items.length === 0) return <Empty title="No payouts waiting" sub="Requested and approved withdrawals appear here." />;
 
   return (
-    <div className="space-y-2.5">
-      {items.map((w) => (
-        <div key={w.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
-          <div className="flex items-center gap-3">
-            <Avatar name={w.promoter_name} />
-            <div>
-              <div className="text-[14px] font-bold text-ink">{w.promoter_name ?? 'Unnamed'}</div>
-              <div className="text-[12px] text-muted">{w.bank.account_name} · {w.bank.bank_code} ··{w.bank.last4} · {relativeTime(w.created_at)}</div>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-[16px] font-extrabold text-ink">{w.amount.amount_display}</div>
-            <StatusPill status={w.status} />
-            {canMoney && (w.status === 'REQUESTED'
-              ? <Button size="sm" onClick={() => approve.mutate(w.id)} loading={approve.isPending}>Approve</Button>
-              : <Button size="sm" onClick={() => setPaying(w)}>Record paid</Button>)}
-          </div>
+    <div className="space-y-4">
+      {exposure.data && <ExposureCard e={exposure.data} />}
+
+      {items.length === 0 ? (
+        <Empty title="No payouts waiting" sub="Requested and approved withdrawals appear here." />
+      ) : (
+        <div className="space-y-2.5">
+          {items.map((w) => {
+            const kycOk = w.kyc_status === 'VERIFIED';
+            return (
+              <div key={w.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <Avatar name={w.promoter_name} />
+                  <div>
+                    <div className="text-[14px] font-bold text-ink">{w.promoter_name ?? 'Unnamed'}</div>
+                    <div className="text-[12px] text-muted">{w.bank.account_name} · {w.bank.bank_code} ··{w.bank.last4} · {relativeTime(w.created_at)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${kycOk ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>KYC {w.kyc_status}</span>
+                  <div className="text-[16px] font-extrabold text-ink">{w.amount.amount_display}</div>
+                  <StatusPill status={w.status} />
+                  {canMoney && (
+                    <>
+                      {!kycOk && can('REVIEW_EVIDENCE') && (
+                        <Button size="sm" variant="secondary" onClick={() => verifyKyc.mutate(w.promoter_id)} loading={verifyKyc.isPending && verifyKyc.variables === w.promoter_id}>Verify KYC</Button>
+                      )}
+                      {w.status === 'REQUESTED'
+                        ? <Button size="sm" onClick={() => approve.mutate(w.id)} loading={approve.isPending} disabled={!kycOk}>Approve</Button>
+                        : <Button size="sm" onClick={() => setPaying(w)}>Record paid</Button>}
+                      <Button size="sm" variant="danger" onClick={() => setFailing(w)}>Fail</Button>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      ))}
+      )}
       {paying && <RecordPaidModal withdrawal={paying} onClose={() => setPaying(null)} onDone={() => { setPaying(null); invalidate(); }} />}
+      {failing && <FailModal withdrawal={failing} onClose={() => setFailing(null)} onDone={() => { setFailing(null); invalidate(); }} />}
     </div>
+  );
+}
+
+function ExposureCard({ e }: { e: ExposureReport }) {
+  const cells: [string, string][] = [
+    ['Owed to promoters', e.promoter_payable.amount_display],
+    ['In-flight payouts', e.in_flight_withdrawals.amount_display],
+    ['Escrow held', e.escrow_held.amount_display],
+    ['Platform revenue', e.platform_revenue.amount_display],
+  ];
+  return (
+    <div className="card p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-[13px] font-semibold text-ink">Exposure</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${e.fully_backed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-brand/10 text-brand-700'}`}>
+          {e.fully_backed ? 'Fully backed' : 'Check balances'}
+        </span>
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {cells.map(([label, value]) => (
+          <div key={label}>
+            <div className="text-[11px] text-muted">{label}</div>
+            <div className="text-[15px] font-extrabold text-ink">{value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FailModal({ withdrawal, onClose, onDone }: { withdrawal: PendingWithdrawal; onClose: () => void; onDone: () => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function submit() {
+    setBusy(true); setError(null);
+    try {
+      await api.post(`/v1/admin/withdrawals/${withdrawal.id}/fail`, { reason });
+      onDone();
+    } catch { setError('Could not fail the withdrawal.'); setBusy(false); }
+  }
+  return (
+    <Modal title="Fail this withdrawal" onClose={onClose}>
+      <p className="text-[13.5px] text-muted">The promoter’s balance is untouched — nothing was posted. They can request it again.</p>
+      <Field label="Reason (shown to the promoter)">
+        <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Bank details don’t match the account name" />
+      </Field>
+      {error && <p className="mt-2 text-[12px] text-brand-700">{error}</p>}
+      <div className="mt-5 flex justify-end gap-3">
+        <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
+        <Button variant="danger" onClick={submit} loading={busy} disabled={reason.trim().length < 5}>Fail withdrawal</Button>
+      </div>
+    </Modal>
   );
 }
 
