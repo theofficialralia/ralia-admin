@@ -375,6 +375,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/campaigns/{id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview price for a budget or slot count
+         * @description Stateless budget↔reach preview — solves slots/reach for a budget (or prices a slot count). Persists nothing; use it to drive the slider, then quote to commit.
+         */
+        post: operations["CampaignsController_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/campaigns/{id}/submit": {
         parameters: {
             query?: never;
@@ -1671,6 +1691,41 @@ export interface components {
              */
             active_filters: number;
         };
+        PlanRequestDto: {
+            /**
+             * @description Budget in kobo — solves for how many slots it buys.
+             * @example 500000
+             */
+            budget_minor?: number;
+            /**
+             * @description Slot count — prices that many slots directly.
+             * @example 12
+             */
+            slots?: number;
+        };
+        CampaignPlanDto: {
+            /** @description Per-slot price at current targeting. */
+            unit_price: components["schemas"]["MoneyDto"];
+            /**
+             * @description Slots this plan buys.
+             * @example 12
+             */
+            slots: number;
+            /** @description Total price = unit_price × slots. */
+            total_price: components["schemas"]["MoneyDto"];
+            /** @description What one promoter earns per slot. */
+            promoter_fee: components["schemas"]["MoneyDto"];
+            /**
+             * @description Per-slot reach basis (targeting.min_effective_reach).
+             * @example 2000
+             */
+            reach_per_slot: number;
+            /**
+             * @description Estimated total reach = slots × reach_per_slot.
+             * @example 24000
+             */
+            estimated_total_reach: number;
+        };
         ClientProfileDto: {
             /** Format: uuid */
             org_id: string;
@@ -2735,6 +2790,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["QuoteDto"];
+                };
+            };
+        };
+    };
+    CampaignsController_plan: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required on mutating money endpoints. A UUID the client generates per intent. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequestDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignPlanDto"];
                 };
             };
         };
