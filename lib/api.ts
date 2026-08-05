@@ -117,6 +117,8 @@ export type PendingPromoter = {
   full_name: string | null;
   location_state: string | null;
   trust_score: number;
+  roles: string[];
+  capability_preview: Record<string, number>;
   email: string;
   phone_e164: string;
   channels: AdminChannel[];

@@ -546,6 +546,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/promoters/{id}/capability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Override a promoter’s per-role capability (§3)
+         * @description Merges the given 0–100 scores over the computed ones and records the confirmation.
+         */
+        post: operations["AdminController_setCapability"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/live-campaigns": {
         parameters: {
             query?: never;
@@ -1397,6 +1417,16 @@ export interface components {
              * @example 50
              */
             trust_score: number;
+            /** @description Roles this promoter offers. */
+            roles: ("DISTRIBUTOR" | "CREATOR" | "PARTICIPATOR" | "INFLUENCER")[];
+            /** @description Self-reported capability factors (0–1). */
+            capability_inputs: {
+                [key: string]: number;
+            } | null;
+            /** @description Admin-confirmed per-role capability (0–100). */
+            capability_scores: {
+                [key: string]: number;
+            } | null;
             /**
              * @description True once every required field is present and at least one channel exists.
              * @example false
@@ -1441,6 +1471,12 @@ export interface components {
             preferred_categories?: string[];
             /** @example 3 */
             max_campaigns_per_week?: number;
+            /** @description The roles this promoter offers. */
+            roles?: ("DISTRIBUTOR" | "CREATOR" | "PARTICIPATOR" | "INFLUENCER")[];
+            /** @description Self-reported capability factors, each normalised 0–1. */
+            capability_inputs?: {
+                [key: string]: number;
+            };
         };
         ChannelDto: {
             /** Format: uuid */
@@ -1685,6 +1721,18 @@ export interface components {
         RejectDto: {
             /** @example Screenshot does not show the campaign creative. */
             reason: string;
+        };
+        SetCapabilityDto: {
+            /**
+             * @description Per-role capability, 0–100. Merged over the computed scores.
+             * @example {
+             *       "DISTRIBUTOR": 78,
+             *       "CREATOR": 60
+             *     }
+             */
+            scores: {
+                [key: string]: number;
+            };
         };
         FundCampaignDto: {
             /**
@@ -2957,6 +3005,34 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RejectDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDecisionDto"];
+                };
+            };
+        };
+    };
+    AdminController_setCapability: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Required on mutating money endpoints. A UUID the client generates per intent. */
+                "Idempotency-Key"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCapabilityDto"];
             };
         };
         responses: {

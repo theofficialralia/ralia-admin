@@ -12,6 +12,14 @@ import { api, type AdminChannel, type PendingPromoter } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, titleCase } from '@/lib/format';
 
+/** Capability band, matching the backend §7 tiers. */
+function capabilityTier(score: number): string {
+  if (score >= 80) return 'Elite';
+  if (score >= 60) return 'Established';
+  if (score >= 40) return 'Developing';
+  return 'Emerging';
+}
+
 export default function PromotersPage() {
   const qc = useQueryClient();
   const { can } = useAuth();
@@ -130,6 +138,26 @@ function PromoterDetail({
           <div className="flex gap-2">
             <Button variant="danger" onClick={onReject}>Reject</Button>
             <Button onClick={onApprove} loading={approving}>Approve</Button>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-6">
+        <div className="text-[13px] font-semibold text-ink">Capability</div>
+        <p className="mb-3 text-[12.5px] text-muted">Computed from what they told us and their verified reach. Approving confirms this.</p>
+        {promoter.roles.length === 0 ? (
+          <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {promoter.roles.map((role) => {
+              const score = promoter.capability_preview[role] ?? 0;
+              return (
+                <div key={role} className="rounded-xl border border-rule px-3.5 py-2">
+                  <div className="text-[12px] font-semibold text-ink">{titleCase(role)}</div>
+                  <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted"> · {capabilityTier(score)}</span></div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
