@@ -144,6 +144,7 @@ export type PendingSubmission = {
   fee: Money;
   promised_reach: number;
   claimed_views: number | null;
+  clicks: number;
   auto_flag: boolean;
   public_url: string | null;
   note: string | null;

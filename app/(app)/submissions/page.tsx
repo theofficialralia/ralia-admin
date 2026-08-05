@@ -95,8 +95,9 @@ function SubmissionCard({ submission: s, canReview }: { submission: PendingSubmi
 
         {/* Numbers */}
         <div className="min-w-0 flex-1">
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-2 text-center">
             <Stat label="Claimed" value={s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} />
+            <Stat label="Clicks" value={compactNumber(s.clicks)} />
             <Stat label="Priced for" value={compactNumber(s.promised_reach)} />
             <Stat label="Fee cap" value={s.fee.amount_display} />
           </div>
