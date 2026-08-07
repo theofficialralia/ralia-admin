@@ -32,8 +32,16 @@ export default function SettingsPage() {
 }
 
 const FIELDS: { key: keyof PlatformRules; label: string; hint: string }[] = [
-  { key: 'take_rate_pct', label: 'Take rate (%)', hint: 'Ralia’s cut of each slot.' },
-  { key: 'rpm_minor', label: 'RPM (kobo / 1,000 views)', hint: 'Base price per 1,000 effective views.' },
+  { key: 'take_rate_pct', label: 'Take rate (%)', hint: 'Ralia’s cut of each slot (the rest is the promoter’s).' },
+  { key: 'rpm_distribution_minor', label: 'Distribution RPM (kobo / 1,000)', hint: 'Price per 1,000 effective views for distribution campaigns.' },
+  { key: 'rpm_creation_minor', label: 'Creation RPM (kobo / 1,000)', hint: 'Price per 1,000 effective views for creation/participation campaigns.' },
+  { key: 'floor_distribution_minor', label: 'Distribution floor (kobo)', hint: 'Minimum campaign fee for a distribution campaign.' },
+  { key: 'floor_creation_minor', label: 'Creation floor (kobo)', hint: 'Minimum campaign fee for a creation/participation campaign.' },
+  { key: 'default_promoters_distribution', label: 'Distribution default promoters', hint: 'Slot count the wizard pre-fills for distribution.' },
+  { key: 'default_promoters_creation', label: 'Creation default promoters', hint: 'Slot count the wizard pre-fills for creation.' },
+  { key: 'default_reach_distribution', label: 'Distribution default reach', hint: 'Reach per slot the wizard pre-fills for distribution.' },
+  { key: 'default_reach_creation', label: 'Creation default reach', hint: 'Reach per slot the wizard pre-fills for creation.' },
+  { key: 'rpm_minor', label: 'Legacy RPM (kobo / 1,000)', hint: 'Fallback rate for any campaign without a category.' },
   { key: 'delivery_threshold_pct', label: 'Delivery threshold τ (%)', hint: 'Below this share of promised, a proof is rejected.' },
   { key: 'unverified_reach_cap', label: 'Unverified reach cap', hint: 'Self-reported reach ceiling until verified.' },
   { key: 'proof_validity_days', label: 'Proof validity (days)', hint: 'How long a verification lasts before it decays.' },

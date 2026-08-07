@@ -283,6 +283,14 @@ export type AdminClient = {
 
 export type PlatformRules = {
   rpm_minor: number;
+  rpm_distribution_minor: number;
+  rpm_creation_minor: number;
+  floor_distribution_minor: number;
+  floor_creation_minor: number;
+  default_reach_distribution: number;
+  default_reach_creation: number;
+  default_promoters_distribution: number;
+  default_promoters_creation: number;
   take_rate_pct: number;
   delivery_threshold_pct: number;
   unverified_reach_cap: number;
