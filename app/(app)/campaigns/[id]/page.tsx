@@ -84,6 +84,20 @@ export default function CampaignDetailPage() {
         <section className="card p-5">
           <h2 className="text-[15px] font-extrabold text-ink">Brief</h2>
           {c.description && <p className="mt-2 text-[13.5px] text-body">{c.description}</p>}
+
+          <div className="mt-4 text-[12px] font-semibold text-muted">Promoter task</div>
+          <p className="text-[13.5px] font-semibold text-body">{c.task}</p>
+          {c.role_config && (c.role_config.task_types?.length || c.role_config.budget_bucket || c.role_config.following_size || c.role_config.audience_reach) && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {c.role_config.task_types?.map((t) => (
+                <span key={t} className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">{t}</span>
+              ))}
+              {c.role_config.budget_bucket && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Budget: {c.role_config.budget_bucket}</span>}
+              {c.role_config.following_size && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Following: {c.role_config.following_size}</span>}
+              {c.role_config.audience_reach && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Reach: {c.role_config.audience_reach}</span>}
+            </div>
+          )}
+
           {c.promoter_instructions && (
             <>
               <div className="mt-4 text-[12px] font-semibold text-muted">What promoters do</div>

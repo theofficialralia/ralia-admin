@@ -224,6 +224,15 @@ export type CampaignTargeting = {
 
 export type CampaignAsset = { id: string; kind: string; caption_text: string | null; file_id: string | null };
 
+export type RoleConfig = {
+  content_type?: string;
+  task_mode?: string;
+  task_types?: string[];
+  budget_bucket?: string;
+  following_size?: string;
+  audience_reach?: string;
+};
+
 export type CampaignDetail = {
   id: string;
   name: string;
@@ -231,6 +240,8 @@ export type CampaignDetail = {
   objective: string;
   description: string | null;
   promoter_instructions: string | null;
+  role_config: RoleConfig | null;
+  task: string;
   destination_url: string | null;
   needs_creative: boolean;
   slots_total: number;
