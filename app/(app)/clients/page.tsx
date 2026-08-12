@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
@@ -18,11 +19,12 @@ export default function ClientsPage() {
   const { can } = useAuth();
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [confirming, setConfirming] = useState<AdminClient | null>(null);
   const q = useQuery({ queryKey: ['clients'], queryFn: () => api.get<AdminClient[]>('/v1/admin/clients') });
 
   const setStatus = useMutation({
     mutationFn: ({ id, action }: { id: string; action: 'deactivate' | 'reactivate' }) => api.post(`/v1/admin/clients/${id}/${action}`, {}),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: ['clients'] }),
+    onSuccess: () => { setConfirming(null); void qc.invalidateQueries({ queryKey: ['clients'] }); },
   });
 
   const clients = q.data ?? [];
@@ -98,7 +100,7 @@ export default function ClientsPage() {
                               size="sm"
                               variant={suspended ? 'secondary' : 'danger'}
                               loading={setStatus.isPending && setStatus.variables?.id === c.org_id}
-                              onClick={() => setStatus.mutate({ id: c.org_id, action: suspended ? 'reactivate' : 'deactivate' })}
+                              onClick={() => (suspended ? setStatus.mutate({ id: c.org_id, action: 'reactivate' }) : setConfirming(c))}
                             >
                               {suspended ? 'Reactivate' : 'Deactivate user'}
                             </Button>
@@ -115,6 +117,18 @@ export default function ClientsPage() {
             </div>
           </div>
         </>
+      )}
+
+      {confirming && (
+        <ConfirmModal
+          title={`Deactivate ${confirming.name}?`}
+          body="They lose access immediately and their live campaigns are paused. You can reactivate them at any time."
+          confirmLabel="Deactivate user"
+          danger
+          pending={setStatus.isPending}
+          onClose={() => setConfirming(null)}
+          onConfirm={() => setStatus.mutate({ id: confirming.org_id, action: 'deactivate' })}
+        />
       )}
     </div>
   );
