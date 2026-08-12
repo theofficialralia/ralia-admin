@@ -8,7 +8,9 @@ import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
+import { PageHeader } from '@/components/layout/PageHeader';
 import { api, uuid, type ExposureReport, type GatewayPayment, type PendingWithdrawal, type ReconciliationReport } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { relativeTime } from '@/lib/format';
@@ -17,15 +19,11 @@ export default function FinancePage() {
   const [tab, setTab] = useState<'withdrawals' | 'reconciliation'>('withdrawals');
   return (
     <div>
-      <div className="mb-5">
-        <div className="text-[13px] font-semibold text-brand-700">Queue · Money</div>
-        <h1 className="text-[26px] font-extrabold tracking-tight text-ink">Finance</h1>
-        <p className="mt-1 text-[14px] text-muted">Approve and record promoter payouts, and reconcile gateway settlements.</p>
-      </div>
+      <PageHeader crumb="Queue · Money" title="Pay promoters" subtitle="Approve and record promoter payouts, and reconcile gateway settlements. Approved payouts are disbursed every Friday." />
 
-      <div className="mb-4 inline-flex rounded-full border border-rule bg-paper p-1 text-[14px] font-semibold">
+      <div className="mb-5 inline-flex rounded-full border border-rule bg-paper p-1 text-[14px] font-semibold">
         {(['withdrawals', 'reconciliation'] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`rounded-full px-5 py-1.5 capitalize transition ${tab === t ? 'bg-brand text-white' : 'text-muted hover:text-ink'}`}>
+          <button key={t} onClick={() => setTab(t)} className={`rounded-full px-6 py-1.5 capitalize transition ${tab === t ? 'bg-brand text-white' : 'text-muted hover:text-ink'}`}>
             {t}
           </button>
         ))}
@@ -51,42 +49,63 @@ function WithdrawalsTab() {
 
   if (q.isLoading) return <Loading />;
   const items = q.data ?? [];
+  const e = exposure.data;
 
   return (
-    <div className="space-y-4">
-      {exposure.data && <ExposureCard e={exposure.data} />}
+    <div className="space-y-5">
+      {e && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatCard label="Owed to promoters" value={e.promoter_payable.amount_display} accent="brand" />
+          <StatCard label="In-flight payouts" value={e.in_flight_withdrawals.amount_display} accent="warn" />
+          <StatCard label="Escrow held" value={e.escrow_held.amount_display} accent="ink" />
+          <StatCard label="Platform revenue" value={e.platform_revenue.amount_display} accent="ok" delta={e.fully_backed ? 'Fully backed' : 'Check balances'} deltaTone={e.fully_backed ? 'up' : 'down'} />
+        </div>
+      )}
 
       {items.length === 0 ? (
         <Empty title="No payouts waiting" sub="Requested and approved withdrawals appear here." />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {items.map((w) => {
             const kycOk = w.kyc_status === 'VERIFIED';
+            const approved = w.status !== 'REQUESTED';
             return (
-              <div key={w.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar name={w.promoter_name} />
-                  <div>
-                    <div className="text-[14px] font-bold text-ink">{w.promoter_name ?? 'Unnamed'}</div>
-                    <div className="text-[12px] text-muted">{w.bank.account_name} · {w.bank.bank_code} ··{w.bank.last4} · {relativeTime(w.created_at)}</div>
+              <div key={w.id} className="card p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar name={w.promoter_name} className="h-11 w-11 text-[14px]" />
+                    <div>
+                      <div className="text-[15px] font-bold text-ink">{w.promoter_name ?? 'Unnamed'}</div>
+                      <div className="text-[12px] text-muted">{w.bank.account_name} · {w.bank.bank_code} ··{w.bank.last4} · Requested {relativeTime(w.created_at)}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${kycOk ? 'bg-ok-wash text-ok' : 'bg-warn-wash text-warn'}`}>KYC {w.kyc_status}</span>
+                    <div className="text-[18px] font-extrabold text-brand-700">{w.amount.amount_display}</div>
+                    <StatusPill status={w.status} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${kycOk ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>KYC {w.kyc_status}</span>
-                  <div className="text-[16px] font-extrabold text-ink">{w.amount.amount_display}</div>
-                  <StatusPill status={w.status} />
-                  {canMoney && (
-                    <>
-                      {!kycOk && can('REVIEW_EVIDENCE') && (
-                        <Button size="sm" variant="secondary" onClick={() => verifyKyc.mutate(w.promoter_id)} loading={verifyKyc.isPending && verifyKyc.variables === w.promoter_id}>Verify KYC</Button>
-                      )}
-                      {w.status === 'REQUESTED'
-                        ? <Button size="sm" onClick={() => approve.mutate(w.id)} loading={approve.isPending} disabled={!kycOk}>Approve</Button>
-                        : <Button size="sm" onClick={() => setPaying(w)}>Record paid</Button>}
-                      <Button size="sm" variant="danger" onClick={() => setFailing(w)}>Fail</Button>
-                    </>
-                  )}
-                </div>
+
+                {canMoney && (
+                  <div className="mt-3.5 border-t border-rule pt-3.5">
+                    {approved ? (
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex-1 rounded-xl border border-ok/30 bg-ok-wash px-4 py-2.5 text-center text-[13.5px] font-semibold text-ok">Approved and scheduled for Friday</div>
+                        <Button variant="secondary" onClick={() => setPaying(w)}>Record paid</Button>
+                        <Button variant="danger" onClick={() => setFailing(w)}>Fail</Button>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <Button size="lg" variant="danger" className="w-full" onClick={() => setFailing(w)}>✕ Hold payment</Button>
+                        {!kycOk && can('REVIEW_EVIDENCE') ? (
+                          <Button size="lg" variant="secondary" className="w-full" onClick={() => verifyKyc.mutate(w.promoter_id)} loading={verifyKyc.isPending && verifyKyc.variables === w.promoter_id}>Verify KYC first</Button>
+                        ) : (
+                          <Button size="lg" className="w-full" onClick={() => approve.mutate(w.id)} loading={approve.isPending} disabled={!kycOk}>Approve &amp; Schedule</Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -98,46 +117,17 @@ function WithdrawalsTab() {
   );
 }
 
-function ExposureCard({ e }: { e: ExposureReport }) {
-  const cells: [string, string][] = [
-    ['Owed to promoters', e.promoter_payable.amount_display],
-    ['In-flight payouts', e.in_flight_withdrawals.amount_display],
-    ['Escrow held', e.escrow_held.amount_display],
-    ['Platform revenue', e.platform_revenue.amount_display],
-  ];
-  return (
-    <div className="card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-[13px] font-semibold text-ink">Exposure</span>
-        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${e.fully_backed ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-brand/10 text-brand-700'}`}>
-          {e.fully_backed ? 'Fully backed' : 'Check balances'}
-        </span>
-      </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {cells.map(([label, value]) => (
-          <div key={label}>
-            <div className="text-[11px] text-muted">{label}</div>
-            <div className="text-[15px] font-extrabold text-ink">{value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function FailModal({ withdrawal, onClose, onDone }: { withdrawal: PendingWithdrawal; onClose: () => void; onDone: () => void }) {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function submit() {
     setBusy(true); setError(null);
-    try {
-      await api.post(`/v1/admin/withdrawals/${withdrawal.id}/fail`, { reason });
-      onDone();
-    } catch { setError('Could not fail the withdrawal.'); setBusy(false); }
+    try { await api.post(`/v1/admin/withdrawals/${withdrawal.id}/fail`, { reason }); onDone(); }
+    catch { setError('Could not hold the withdrawal.'); setBusy(false); }
   }
   return (
-    <Modal title="Fail this withdrawal" onClose={onClose}>
+    <Modal title="Hold this withdrawal" onClose={onClose}>
       <p className="text-[13.5px] text-muted">The promoter’s balance is untouched — nothing was posted. They can request it again.</p>
       <Field label="Reason (shown to the promoter)">
         <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Bank details don’t match the account name" />
@@ -145,7 +135,7 @@ function FailModal({ withdrawal, onClose, onDone }: { withdrawal: PendingWithdra
       {error && <p className="mt-2 text-[12px] text-brand-700">{error}</p>}
       <div className="mt-5 flex justify-end gap-3">
         <Button variant="secondary" onClick={onClose} disabled={busy}>Cancel</Button>
-        <Button variant="danger" onClick={submit} loading={busy} disabled={reason.trim().length < 5}>Fail withdrawal</Button>
+        <Button variant="danger" onClick={submit} loading={busy} disabled={reason.trim().length < 5}>Hold payment</Button>
       </div>
     </Modal>
   );
@@ -157,10 +147,8 @@ function RecordPaidModal({ withdrawal, onClose, onDone }: { withdrawal: PendingW
   const [error, setError] = useState<string | null>(null);
   async function submit() {
     setBusy(true); setError(null);
-    try {
-      await api.post(`/v1/admin/withdrawals/${withdrawal.id}/record-paid`, { paid_ref: ref }, { idempotencyKey: uuid() });
-      onDone();
-    } catch { setError('Could not record the payout.'); setBusy(false); }
+    try { await api.post(`/v1/admin/withdrawals/${withdrawal.id}/record-paid`, { paid_ref: ref }, { idempotencyKey: uuid() }); onDone(); }
+    catch { setError('Could not record the payout.'); setBusy(false); }
   }
   return (
     <Modal title="Record the payout you sent" onClose={onClose}>
@@ -194,17 +182,17 @@ function ReconciliationTab() {
 
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric label="Gateway total" value={r.gateway_total.amount_display} />
-        <Metric label="Settled" value={r.settled_total.amount_display} />
-        <Metric label="Awaiting" value={String(r.recorded)} />
-        <Metric label="Ledger match" value={r.ledger_matches_gateway ? 'Balanced' : 'Mismatch'} tone={r.ledger_matches_gateway ? 'ok' : 'brand'} />
+      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Gateway total" value={r.gateway_total.amount_display} accent="ink" />
+        <StatCard label="Settled" value={r.settled_total.amount_display} accent="ok" />
+        <StatCard label="Awaiting" value={String(r.recorded)} accent="warn" />
+        <StatCard label="Ledger match" value={r.ledger_matches_gateway ? 'Balanced' : 'Mismatch'} accent={r.ledger_matches_gateway ? 'ok' : 'brand'} />
       </div>
 
       {r.payments.length === 0 ? (
         <Empty title="Nothing to reconcile" sub="No gateway charges recorded yet." />
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {r.payments.map((p) => (
             <div key={p.id} className="card flex flex-wrap items-center justify-between gap-3 p-4">
               <div className="min-w-0">
@@ -241,10 +229,8 @@ function SettleModal({ payment, onClose, onDone }: { payment: GatewayPayment; on
   const [error, setError] = useState<string | null>(null);
   async function submit() {
     setBusy(true); setError(null);
-    try {
-      await api.post(`/v1/admin/reconciliation/${payment.id}/settle`, { settlement_ref: ref, settled_minor: settled });
-      onDone();
-    } catch { setError('Could not record the settlement.'); setBusy(false); }
+    try { await api.post(`/v1/admin/reconciliation/${payment.id}/settle`, { settlement_ref: ref, settled_minor: settled }); onDone(); }
+    catch { setError('Could not record the settlement.'); setBusy(false); }
   }
   return (
     <Modal title="Confirm settlement" onClose={onClose}>
@@ -261,16 +247,6 @@ function SettleModal({ payment, onClose, onDone }: { payment: GatewayPayment; on
         <Button onClick={submit} loading={busy} disabled={ref.trim().length < 3}>Confirm settled</Button>
       </div>
     </Modal>
-  );
-}
-
-function Metric({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'brand' }) {
-  const color = tone === 'ok' ? 'text-ok' : tone === 'brand' ? 'text-brand-700' : 'text-ink';
-  return (
-    <div className="card p-4">
-      <div className={`text-[18px] font-extrabold ${color}`}>{value}</div>
-      <div className="text-[11.5px] font-semibold uppercase tracking-wide text-muted">{label}</div>
-    </div>
   );
 }
 

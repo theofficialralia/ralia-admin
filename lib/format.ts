@@ -29,3 +29,25 @@ export function initials(name: string | null | undefined): string {
 export function titleCase(s: string): string {
   return s.toLowerCase().replace(/(^|[\s_])\w/g, (m) => m.toUpperCase()).replace(/_/g, ' ');
 }
+
+/** A friendly display name derived from an email local-part (no name field on the admin). */
+export function nameFromEmail(email: string | null | undefined): string {
+  if (!email) return 'Admin';
+  const local = email.split('@')[0] ?? '';
+  const cleaned = local.replace(/[._-]+/g, ' ').replace(/\d+/g, '').trim();
+  return cleaned ? titleCase(cleaned) : 'Admin';
+}
+
+/**
+ * The admin's role name, derived from the two real backend capabilities.
+ * Both → Super admin · review only → Campaign reviewer · money only → Finance.
+ */
+export function roleFromCapabilities(caps: string[] | null | undefined): string {
+  const set = new Set(caps ?? []);
+  const review = set.has('REVIEW_EVIDENCE');
+  const money = set.has('RECORD_MONEY');
+  if (review && money) return 'Super admin';
+  if (review) return 'Campaign reviewer';
+  if (money) return 'Finance';
+  return 'Support';
+}

@@ -1,16 +1,19 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { api, type AdminChannel, type PendingPromoter } from '@/lib/api';
+import { PageHeader } from '@/components/layout/PageHeader';
+import { api, type AdminChannel, type PendingPromoter, type PlatformAnalytics } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import { compactNumber, titleCase } from '@/lib/format';
+import { compactNumber, relativeTime, titleCase } from '@/lib/format';
 
 /** Capability band, matching the backend §7 tiers. */
 function capabilityTier(score: number): string {
@@ -20,40 +23,51 @@ function capabilityTier(score: number): string {
   return 'Emerging';
 }
 
+function statusTotal(rows: { status: string; count: number }[] | undefined, ...match: string[]) {
+  if (!rows) return null;
+  return rows.filter((r) => match.includes(r.status.toUpperCase())).reduce((s, r) => s + r.count, 0);
+}
+
 export default function PromotersPage() {
   const qc = useQueryClient();
   const { can } = useAuth();
   const [selected, setSelected] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [search, setSearch] = useState('');
 
   const q = useQuery({
     queryKey: ['promoters'],
     queryFn: () => api.get<PendingPromoter[]>('/v1/admin/queues/promoters'),
   });
+  const stats = useQuery({ queryKey: ['analytics'], queryFn: () => api.get<PlatformAnalytics>('/v1/admin/analytics') });
 
   const promoters = q.data ?? [];
-  const current = promoters.find((p) => p.user_id === selected) ?? promoters[0] ?? null;
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return promoters;
+    return promoters.filter((p) => (p.full_name ?? '').toLowerCase().includes(term) || p.email.toLowerCase().includes(term) || p.phone_e164.includes(term));
+  }, [promoters, search]);
+  const current = filtered.find((p) => p.user_id === selected) ?? filtered[0] ?? null;
+
+  const s = stats.data?.promoters_by_status;
+  const approved = statusTotal(s, 'ACTIVE');
+  const pending = statusTotal(s, 'AWAITING_APPROVAL', 'PENDING') ?? promoters.length;
+  const rejected = statusTotal(s, 'REJECTED');
+  const total = s ? s.reduce((a, r) => a + r.count, 0) : null;
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['promoters'] });
+    void qc.invalidateQueries({ queryKey: ['analytics'] });
     void qc.invalidateQueries({ queryKey: ['nav-counts'] });
   };
 
   const approve = useMutation({
     mutationFn: (id: string) => api.post(`/v1/admin/promoters/${id}/approve`, {}),
-    onSuccess: () => {
-      setSelected(null);
-      invalidate();
-    },
+    onSuccess: () => { setSelected(null); invalidate(); },
   });
-
   const reject = useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/v1/admin/promoters/${id}/reject`, { reason }),
-    onSuccess: () => {
-      setRejecting(false);
-      setSelected(null);
-      invalidate();
-    },
+    onSuccess: () => { setRejecting(false); setSelected(null); invalidate(); },
   });
 
   if (q.isLoading) {
@@ -62,10 +76,17 @@ export default function PromotersPage() {
 
   return (
     <div>
-      <div className="mb-5">
-        <div className="text-[13px] font-semibold text-brand-700">Queue · Users</div>
-        <h1 className="text-[26px] font-extrabold tracking-tight text-ink">Approve promoters</h1>
-        <p className="mt-1 text-[14px] text-muted">A promoter sees no offers until you approve them. Check the reach evidence matches what they claimed.</p>
+      <PageHeader
+        crumb="Queue · Users"
+        title="Approve promoters"
+        subtitle="A promoter sees no offers until you approve them. Check that the reach evidence matches what they claimed."
+      />
+
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Total promoters" value={total != null ? compactNumber(total) : '—'} accent="ink" />
+        <StatCard label="Approved" value={approved != null ? compactNumber(approved) : '—'} accent="ok" />
+        <StatCard label="Pending" value={compactNumber(pending)} accent="warn" />
+        <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '—'} accent="brand" />
       </div>
 
       {promoters.length === 0 ? (
@@ -74,31 +95,44 @@ export default function PromotersPage() {
           <div className="mt-1 text-[13.5px]">The approval queue is empty.</div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[320px_1fr]">
-          {/* Master list */}
-          <div className="space-y-2">
-            {promoters.map((p) => (
-              <button
-                key={p.user_id}
-                onClick={() => setSelected(p.user_id)}
-                className={`w-full rounded-2xl border p-3 text-left transition ${
-                  current?.user_id === p.user_id ? 'border-brand bg-brand/5' : 'border-rule bg-paper hover:bg-wash'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar name={p.full_name} />
-                  <div className="min-w-0">
-                    <div className="truncate text-[14px] font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
-                    <div className="truncate text-[12px] text-muted">{p.location_state ?? '—'} · trust {p.trust_score}</div>
+        <>
+          <SearchInput value={search} onChange={setSearch} placeholder="Search for a promoter" />
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-[340px_1fr]">
+            {/* Master list */}
+            <div className="space-y-2.5">
+              {filtered.map((p) => (
+                <button
+                  key={p.user_id}
+                  onClick={() => setSelected(p.user_id)}
+                  className={`w-full rounded-2xl border p-3.5 text-left transition ${
+                    current?.user_id === p.user_id ? 'border-brand bg-brand/5 shadow-sm' : 'border-rule bg-paper hover:bg-wash'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Avatar name={p.full_name} className="h-11 w-11 text-[14px]" />
+                    <div className="min-w-0">
+                      <div className="truncate text-[14.5px] font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
+                      <div className="truncate text-[12px] text-muted">{p.phone_e164} · {p.location_state ?? '—'}</div>
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+              {filtered.length === 0 && <div className="rounded-2xl border border-rule p-4 text-center text-[13px] text-muted">No match.</div>}
+            </div>
 
-          {/* Detail */}
-          {current && <PromoterDetail promoter={current} canReview={can('REVIEW_EVIDENCE')} onApprove={() => approve.mutate(current.user_id)} onReject={() => setRejecting(true)} approving={approve.isPending} onChanged={invalidate} />}
-        </div>
+            {/* Detail */}
+            {current && (
+              <PromoterDetail
+                promoter={current}
+                canReview={can('REVIEW_EVIDENCE')}
+                onApprove={() => approve.mutate(current.user_id)}
+                onReject={() => setRejecting(true)}
+                approving={approve.isPending}
+                onChanged={invalidate}
+              />
+            )}
+          </div>
+        </>
       )}
 
       {rejecting && current && (
@@ -123,55 +157,90 @@ function PromoterDetail({
   approving: boolean;
   onChanged: () => void;
 }) {
+  const [tab, setTab] = useState<'channels' | 'details'>('channels');
+
   return (
     <div className="card p-5 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Avatar name={promoter.full_name} className="h-12 w-12 text-[15px]" />
+          <Avatar name={promoter.full_name} className="h-12 w-12 text-[16px]" />
           <div>
-            <div className="text-[18px] font-extrabold text-ink">{promoter.full_name ?? 'Unnamed'}</div>
-            <div className="text-[13px] text-muted">{promoter.email} · {promoter.phone_e164}</div>
-            <div className="text-[13px] text-muted">{promoter.location_state ?? '—'} · trust {promoter.trust_score}/100</div>
+            <div className="text-[19px] font-extrabold text-ink">{promoter.full_name ?? 'Unnamed'}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
+              <span>📱 {promoter.phone_e164}</span>
+              <span>📍 {promoter.location_state ?? '—'}</span>
+              <span>✉ {promoter.email}</span>
+            </div>
           </div>
         </div>
         {canReview && (
           <div className="flex gap-2">
-            <Button variant="danger" onClick={onReject}>Reject</Button>
-            <Button onClick={onApprove} loading={approving}>Approve</Button>
+            <Button variant="danger" onClick={onReject}>✕ Reject promoter</Button>
+            <Button onClick={onApprove} loading={approving}>Accept</Button>
           </div>
         )}
       </div>
 
-      <div className="mt-6">
-        <div className="text-[13px] font-semibold text-ink">Capability</div>
-        <p className="mb-3 text-[12.5px] text-muted">Computed from what they told us and their verified reach. Approving confirms this.</p>
-        {promoter.roles.length === 0 ? (
-          <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {promoter.roles.map((role) => {
-              const score = promoter.capability_preview[role] ?? 0;
-              return (
-                <div key={role} className="rounded-xl border border-rule px-3.5 py-2">
-                  <div className="text-[12px] font-semibold text-ink">{titleCase(role)}</div>
-                  <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted"> · {capabilityTier(score)}</span></div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* Tabs */}
+      <div className="mt-5 inline-flex w-full rounded-2xl bg-wash p-1 text-[14px] font-semibold sm:w-auto">
+        {([['channels', `Channels · ${promoter.channels.length}`], ['details', 'Other details']] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`flex-1 rounded-xl px-6 py-2 transition sm:flex-none ${tab === k ? 'bg-paper text-brand shadow-sm' : 'text-muted hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      <div className="mt-6">
-        <div className="text-[13px] font-semibold text-ink">Channels · {promoter.channels.length}</div>
-        <p className="mb-3 text-[12.5px] text-muted">Effective reach is what Ralia pays on. Verify a channel to lift it above the self-reported cap.</p>
-        <div className="space-y-3">
-          {promoter.channels.length === 0 && <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No channels submitted.</div>}
-          {promoter.channels.map((c) => (
-            <ChannelRow key={c.id} channel={c} canReview={canReview} onChanged={onChanged} />
-          ))}
+      {tab === 'channels' ? (
+        <div className="mt-4">
+          <p className="mb-3 text-[12.5px] text-muted">Effective reach is what Ralia pays on. Verify a channel to lift it above the self-reported cap.</p>
+          <div className="space-y-3">
+            {promoter.channels.length === 0 && <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No channels submitted.</div>}
+            {promoter.channels.map((c) => (
+              <ChannelRow key={c.id} channel={c} canReview={canReview} onChanged={onChanged} />
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <MiniStat label="Trust score" value={`${promoter.trust_score}/100`} />
+            <MiniStat label="Roles offered" value={String(promoter.roles.length)} />
+            <MiniStat label="Channels" value={String(promoter.channels.length)} />
+          </div>
+          <div>
+            <div className="text-[13px] font-semibold text-ink">Capability</div>
+            <p className="mb-3 text-[12.5px] text-muted">Computed from what they told us and their verified reach. Approving confirms this.</p>
+            {promoter.roles.length === 0 ? (
+              <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {promoter.roles.map((role) => {
+                  const score = promoter.capability_preview[role] ?? 0;
+                  return (
+                    <div key={role} className="rounded-xl border border-rule px-3.5 py-2">
+                      <div className="text-[12px] font-semibold text-ink">{titleCase(role)}</div>
+                      <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted"> · {capabilityTier(score)}</span></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl bg-wash px-3.5 py-2.5">
+      <div className="text-[16px] font-extrabold text-ink">{value}</div>
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</div>
     </div>
   );
 }
@@ -181,36 +250,33 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
 
   async function verify(tier: 'SCREENSHOT' | 'INSIGHTS') {
     setBusy(tier);
-    try {
-      await api.post(`/v1/admin/channels/${channel.id}/verify`, { tier });
-      onChanged();
-    } finally {
-      setBusy(null);
-    }
+    try { await api.post(`/v1/admin/channels/${channel.id}/verify`, { tier }); onChanged(); } finally { setBusy(null); }
   }
   async function unverify() {
     setBusy('unverify');
-    try {
-      await api.post(`/v1/admin/channels/${channel.id}/unverify`, { reason: 'Proof not accepted' });
-      onChanged();
-    } finally {
-      setBusy(null);
-    }
+    try { await api.post(`/v1/admin/channels/${channel.id}/unverify`, { reason: 'Proof not accepted' }); onChanged(); } finally { setBusy(null); }
   }
 
   const basis = channel.is_group ? `${compactNumber(channel.active_participants ?? 0)} active` : `${compactNumber(channel.claimed_audience)} claimed`;
 
   return (
-    <div className="rounded-xl border border-rule p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="rounded-2xl border border-rule p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <div className="flex items-center gap-2 text-[14px] font-bold text-ink">
             {titleCase(channel.platform)}
             {channel.handle && <span className="text-[12.5px] font-normal text-muted">{channel.handle}</span>}
           </div>
-          <div className="text-[12.5px] text-muted">{basis} · <span className="font-semibold text-ink">{compactNumber(channel.effective_reach)}</span> effective reach</div>
+          <div className="mt-0.5 text-[12.5px] text-muted">{basis} · <span className="font-semibold text-ink">{compactNumber(channel.effective_reach)}</span> effective reach</div>
         </div>
+        <div className="text-right">
+          <div className="text-[11px] text-muted">Gross following</div>
+          <div className="text-[15px] font-extrabold text-ink">{compactNumber(channel.claimed_audience)}</div>
+        </div>
+      </div>
+      <div className="mt-2 flex items-center gap-2">
         <StatusPill status={channel.verification_tier} />
+        {channel.verified_at && <span className="text-[11.5px] text-muted">verified {relativeTime(channel.verified_at)}</span>}
       </div>
 
       {canReview && (
