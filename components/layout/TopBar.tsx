@@ -35,7 +35,7 @@ export function TopBar() {
         }}
       >
         <IconSearch className="pointer-events-none absolute left-4 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted" />
-        <input name="q" className="input rounded-full py-2.5 pl-11" placeholder="Search…" />
+        <input name="q" className="input rounded-full !pl-11" placeholder="Search…" />
       </form>
 
       <div className="ml-auto flex items-center gap-3">

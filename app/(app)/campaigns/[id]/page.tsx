@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
@@ -11,14 +11,20 @@ import { Modal } from '@/components/ui/Modal';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { api, uuid, type Candidate, type CampaignDetail } from '@/lib/api';
+import { IconArrowLeft } from '@/components/brand/icons';
+import { CampaignDetailsView } from '@/components/campaigns/CampaignInfo';
+import { SubmissionCard } from '@/components/campaigns/SubmissionCard';
+import { api, uuid, type Candidate, type CampaignDetail, type PendingSubmission } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, titleCase } from '@/lib/format';
 
-export default function CampaignDetailPage() {
+type Tab = 'offers' | 'submissions' | 'details';
+
+export default function CampaignWorkspacePage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
   const { can } = useAuth();
+  const [tab, setTab] = useState<Tab>('details');
   const [rejecting, setRejecting] = useState(false);
   const [funding, setFunding] = useState(false);
 
@@ -31,7 +37,6 @@ export default function CampaignDetailPage() {
     void qc.invalidateQueries({ queryKey: ['live-campaigns'] });
     void qc.invalidateQueries({ queryKey: ['nav-counts'] });
   };
-
   const approve = useMutation({ mutationFn: () => api.post(`/v1/admin/campaigns/${id}/approve`, {}), onSuccess: invalidate });
   const reject = useMutation({ mutationFn: (reason: string) => api.post(`/v1/admin/campaigns/${id}/reject`, { reason }), onSuccess: () => { setRejecting(false); invalidate(); } });
 
@@ -41,18 +46,24 @@ export default function CampaignDetailPage() {
 
   const canReview = can('REVIEW_EVIDENCE');
   const canMoney = can('RECORD_MONEY');
+  const live = c.status === 'LIVE' || c.status === 'PAUSED';
+  const dateRange = fmtRange(c.starts_at, c.ends_at);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <Link href="/campaigns" className="text-[13px] font-semibold text-muted hover:text-ink">← All campaigns</Link>
-
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <StatusPill status={c.status} />
-            <span className="text-[13px] text-muted">{titleCase(c.objective)} · {c.client.name}</span>
+    <div className="mx-auto max-w-5xl">
+      {/* Header */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Link href="/campaigns" className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-rule text-muted transition hover:bg-wash hover:text-ink" aria-label="Back">
+            <IconArrowLeft className="h-[18px] w-[18px]" />
+          </Link>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-[26px] font-extrabold tracking-tight text-ink">{c.name}</h1>
+              <StatusPill status={c.status} />
+            </div>
+            <div className="mt-0.5 text-[13.5px] text-muted">{c.client.name}{dateRange ? ` · ${dateRange}` : ''}</div>
           </div>
-          <h1 className="mt-1 text-[26px] font-extrabold tracking-tight text-ink">{c.name}</h1>
         </div>
         <div className="text-right">
           <div className="text-[12px] text-muted">Budget</div>
@@ -61,7 +72,7 @@ export default function CampaignDetailPage() {
         </div>
       </div>
 
-      {/* Action bar */}
+      {/* Approval / funding action bar */}
       {(c.status === 'PENDING_APPROVAL' || c.status === 'CONFIRMING_PAYMENT') && (
         <div className="card mt-5 flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="text-[13.5px] text-muted">
@@ -79,72 +90,56 @@ export default function CampaignDetailPage() {
         </div>
       )}
 
-      {/* Review */}
-      <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <section className="card p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">Brief</h2>
-          {c.description && <p className="mt-2 text-[13.5px] text-body">{c.description}</p>}
-
-          <div className="mt-4 text-[12px] font-semibold text-muted">Promoter task</div>
-          <p className="text-[13.5px] font-semibold text-body">{c.task}</p>
-          {c.role_config && (c.role_config.task_types?.length || c.role_config.budget_bucket || c.role_config.following_size || c.role_config.audience_reach) && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {c.role_config.task_types?.map((t) => (
-                <span key={t} className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">{t}</span>
-              ))}
-              {c.role_config.budget_bucket && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Budget: {c.role_config.budget_bucket}</span>}
-              {c.role_config.following_size && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Following: {c.role_config.following_size}</span>}
-              {c.role_config.audience_reach && <span className="rounded-full bg-wash px-2.5 py-1 text-[11.5px] font-semibold text-ink">Reach: {c.role_config.audience_reach}</span>}
-            </div>
-          )}
-
-          {c.promoter_instructions && (
-            <>
-              <div className="mt-4 text-[12px] font-semibold text-muted">What promoters do</div>
-              <p className="text-[13.5px] text-body">{c.promoter_instructions}</p>
-            </>
-          )}
-          {c.destination_url && (
-            <>
-              <div className="mt-4 text-[12px] font-semibold text-muted">Destination</div>
-              <p className="break-all text-[13.5px] text-brand-700">{c.destination_url}</p>
-            </>
-          )}
-        </section>
-
-        <section className="card p-5">
-          <h2 className="text-[15px] font-extrabold text-ink">Targeting</h2>
-          {c.targeting ? (
-            <div className="mt-3 space-y-3">
-              <ChipRow label="Location" values={c.targeting.states.length ? c.targeting.states : ['Nationwide']} />
-              <ChipRow label="Age" values={c.targeting.age_min || c.targeting.age_max ? [`${c.targeting.age_min ?? '18'}–${c.targeting.age_max ?? '60+'}`] : ['All ages']} />
-              <ChipRow label="Language" values={c.targeting.languages.length ? c.targeting.languages : ['Any']} />
-              <ChipRow label="Platform" values={c.targeting.platforms.length ? c.targeting.platforms.map(titleCase) : ['Any']} />
-              <ChipRow label="Roles" values={c.targeting.roles.length ? c.targeting.roles.map(titleCase) : ['Any']} />
-              {c.targeting.categories.length > 0 && <ChipRow label="Categories" values={c.targeting.categories} />}
-            </div>
-          ) : (
-            <p className="mt-2 text-[13.5px] text-muted">No targeting set.</p>
-          )}
-          {c.assets.length > 0 && (
-            <>
-              <div className="mt-5 text-[12px] font-semibold text-muted">Creative · {c.assets.length}</div>
-              <ul className="mt-1 space-y-1 text-[13px] text-body">
-                {c.assets.map((a) => (
-                  <li key={a.id}>• {titleCase(a.kind)}{a.caption_text ? ` — “${a.caption_text}”` : ''}</li>
-                ))}
-              </ul>
-            </>
-          )}
-        </section>
+      {/* Tabs */}
+      <div className="mt-5 grid grid-cols-3 gap-2 rounded-2xl bg-wash p-1.5 text-[14px] font-semibold sm:inline-grid sm:auto-cols-max sm:grid-flow-col">
+        {([['offers', 'Offer management'], ['submissions', 'Submissions'], ['details', 'Campaign details']] as const).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setTab(k)}
+            className={`rounded-xl px-6 py-2 transition ${tab === k ? 'bg-paper text-brand shadow-sm' : 'text-muted hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Matching */}
-      {(c.status === 'LIVE' || c.status === 'PAUSED') && <Matching campaignId={c.id} onOffered={invalidate} canReview={canReview} />}
+      <div className="mt-5">
+        {tab === 'offers' && (live ? <OfferManagement campaignId={c.id} canReview={canReview} onOffered={invalidate} /> : <Notice text="Offers open once the campaign is funded and live." />)}
+        {tab === 'submissions' && <CampaignSubmissions campaignId={c.id} canReview={canReview} />}
+        {tab === 'details' && <CampaignDetailsView c={c} />}
+      </div>
 
       {rejecting && <ReasonModal title={`Reject ${c.name}?`} placeholder="e.g. The destination link is broken." confirmLabel="Reject" pending={reject.isPending} onClose={() => setRejecting(false)} onConfirm={(r) => reject.mutate(r)} />}
       {funding && c.price && <FundModal campaignId={c.id} amountMinor={c.price.amount_minor} amountDisplay={c.price.amount_display} onClose={() => setFunding(false)} onDone={() => { setFunding(false); invalidate(); }} />}
     </div>
+  );
+}
+
+function fmtRange(a: string | null, b: string | null): string | null {
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
+  if (a && b) return `${fmt(a)} – ${fmt(b)}`;
+  if (a) return `from ${fmt(a)}`;
+  return null;
+}
+
+function Notice({ text }: { text: string }) {
+  return <div className="card grid place-items-center p-12 text-center text-[13.5px] text-muted">{text}</div>;
+}
+
+function CampaignSubmissions({ campaignId, canReview }: { campaignId: string; canReview: boolean }) {
+  const q = useQuery({ queryKey: ['campaign-submissions'], queryFn: () => api.get<PendingSubmission[]>('/v1/admin/queues/submissions') });
+  const items = useMemo(() => (q.data ?? []).filter((s) => s.campaign_id === campaignId), [q.data, campaignId]);
+
+  if (q.isLoading) return <div className="flex h-32 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>;
+  if (items.length === 0) return <Notice text="No proofs waiting for this campaign." />;
+
+  return (
+    <>
+      <div className="mb-3 text-[14px] font-semibold text-ink">Review proof</div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {items.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
+      </div>
+    </>
   );
 }
 
@@ -155,23 +150,11 @@ function fitColor(pct: number): string {
   return 'text-ink';
 }
 
-function ChipRow({ label, values }: { label: string; values: string[] }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-[12px] font-semibold text-muted">{label}</span>
-      {values.map((v) => (
-        <span key={v} className="rounded-full bg-wash px-2.5 py-0.5 text-[12px] font-medium text-ink">{v}</span>
-      ))}
-    </div>
-  );
-}
-
-function Matching({ campaignId, onOffered, canReview }: { campaignId: string; onOffered: () => void; canReview: boolean }) {
+function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: string; onOffered: () => void; canReview: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState<string | null>(null);
 
   const candidates = useQuery({ queryKey: ['candidates', campaignId], queryFn: () => api.get<Candidate[]>(`/v1/campaigns/${campaignId}/candidates`) });
-
   const send = useMutation({
     mutationFn: (ids: string[]) => api.post(`/v1/campaigns/${campaignId}/offers`, { promoter_ids: ids }),
     onSuccess: (offers: unknown) => {
@@ -182,13 +165,11 @@ function Matching({ campaignId, onOffered, canReview }: { campaignId: string; on
       onOffered();
     },
   });
-
   const toggle = (id: string) => setSelected((prev) => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
-
   const list = candidates.data ?? [];
 
   return (
-    <section className="card mt-5 p-5">
+    <section className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-extrabold text-ink">Match promoters</h2>
@@ -221,9 +202,7 @@ function Matching({ campaignId, onOffered, canReview }: { campaignId: string; on
                 <Avatar name={c.full_name} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{c.full_name ?? 'Unnamed'}</div>
-                  <div className="truncate text-[12px] text-muted">
-                    {titleCase(c.channel.platform)} · {c.location_state ?? '—'} · trust {c.trust_score} · {c.capability_tier}
-                  </div>
+                  <div className="truncate text-[12px] text-muted">{titleCase(c.channel.platform)} · {c.location_state ?? '—'} · trust {c.trust_score} · {c.capability_tier}</div>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className={`text-[15px] font-extrabold ${fitColor(c.fit_pct)}`}>{c.fit_pct}<span className="text-[10px] font-semibold text-muted"> % fit</span></div>
@@ -244,15 +223,9 @@ function FundModal({ campaignId, amountMinor, amountDisplay, onClose, onDone }: 
   const [error, setError] = useState<string | null>(null);
 
   async function record() {
-    setBusy(true);
-    setError(null);
-    try {
-      await api.post(`/v1/admin/campaigns/${campaignId}/fund`, { amount_minor: amountMinor, reference }, { idempotencyKey: uuid() });
-      onDone();
-    } catch {
-      setError('Could not record funding. Check the amount matches the quoted price.');
-      setBusy(false);
-    }
+    setBusy(true); setError(null);
+    try { await api.post(`/v1/admin/campaigns/${campaignId}/fund`, { amount_minor: amountMinor, reference }, { idempotencyKey: uuid() }); onDone(); }
+    catch { setError('Could not record funding. Check the amount matches the quoted price.'); setBusy(false); }
   }
 
   return (

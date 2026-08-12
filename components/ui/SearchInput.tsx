@@ -22,7 +22,8 @@ export function SearchInput({
       <div className="relative min-w-0 flex-1">
         <IconSearch className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-muted" />
         <input
-          className="input pl-11"
+          data-list-search
+          className="input !pl-11"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
@@ -34,7 +35,7 @@ export function SearchInput({
           <select
             value={filter.value}
             onChange={(e) => filter.onChange(e.target.value)}
-            className="input cursor-pointer appearance-none pl-11 pr-10 font-semibold text-ink"
+            className="input cursor-pointer appearance-none !pl-11 !pr-10 font-semibold text-ink"
           >
             {filter.options.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
