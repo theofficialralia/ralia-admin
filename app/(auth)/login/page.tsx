@@ -8,6 +8,7 @@ import { Field } from '@/components/ui/Field';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { api, ApiError, type Tokens } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { SUPPORT } from '@/lib/support';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function LoginPage() {
 
         <form onSubmit={submit} className="mt-6 space-y-4">
           <Field label="Email">
-            <input className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@ralia.app" required />
+            <input className="input" type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@ralia.co" required />
           </Field>
           <Field label="Password">
             <PasswordInput autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Your password" required />
@@ -53,6 +54,11 @@ export default function LoginPage() {
           </Button>
         </form>
       </div>
+      <p className="mt-5 text-center text-[12px] leading-relaxed text-muted">
+        <a href={SUPPORT.termsUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand-700">Terms of Service</a>
+        {' · '}
+        <a href={SUPPORT.privacyUrl} target="_blank" rel="noreferrer" className="font-semibold text-brand-700">Privacy Notice</a>
+      </p>
     </div>
   );
 }
