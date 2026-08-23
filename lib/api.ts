@@ -246,6 +246,8 @@ export type CampaignDetail = {
   needs_creative: boolean;
   slots_total: number;
   slots_filled: number;
+  expected_reach: number;
+  confirmed_reach: number;
   price: Money | null;
   budget: Money;
   quoted_at: string | null;
@@ -254,6 +256,25 @@ export type CampaignDetail = {
   client: { org_id: string; name: string; industry: string | null };
   targeting: CampaignTargeting | null;
   assets: CampaignAsset[];
+};
+
+export type OfferRosterEntry = {
+  promoter_id: string;
+  full_name: string | null;
+  location_state: string | null;
+  phone_e164: string;
+  platform: string;
+  effective_reach: number;
+  fit_pct: number | null;
+  status: string;
+};
+
+export type OfferRoster = {
+  total_eligible: number;
+  accepted: number;
+  unanswered: number;
+  declined: number;
+  roster: OfferRosterEntry[];
 };
 
 export type Candidate = {

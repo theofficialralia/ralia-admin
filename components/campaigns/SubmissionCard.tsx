@@ -4,7 +4,6 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Field } from '@/components/ui/Field';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { IconCopy, IconExternal } from '@/components/brand/icons';
 import { api, ApiError, uuid, type PendingSubmission } from '@/lib/api';
@@ -57,9 +56,29 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
             <div className="text-[12px] text-muted">{s.campaign_name} · {relativeTime(s.submitted_at)}</div>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-[11px] text-muted">Fee at stake</div>
-          <div className="text-[16px] font-extrabold text-brand-700">{s.fee.amount_display}</div>
+      </div>
+
+      {/* Views (admin verifies) + Amount to earn (follows, pro-rata) */}
+      <div className="mx-4 mt-3 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-rule p-3">
+          <div className="text-[11px] text-muted">Views</div>
+          {canReview ? (
+            <input
+              type="number"
+              min={0}
+              value={verified}
+              onChange={(e) => { setVerified(Math.max(0, Number(e.target.value))); setError(null); }}
+              className="w-full bg-transparent text-[22px] font-extrabold text-ink outline-none"
+            />
+          ) : (
+            <div className="text-[22px] font-extrabold text-ink">{compactNumber(verified)}</div>
+          )}
+          <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} · priced for {compactNumber(s.promised_reach)}</div>
+        </div>
+        <div className="rounded-2xl border border-rule p-3">
+          <div className="text-[11px] text-muted">Amount to earn</div>
+          <div className="text-[22px] font-extrabold text-brand-700">₦{(estPay / 100).toLocaleString()}</div>
+          <div className="text-[11px] text-muted">{Math.round(ratio * 100)}% of {s.fee.amount_display} · {compactNumber(s.clicks)} clicks</div>
         </div>
       </div>
 
@@ -96,22 +115,6 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
       )}
       {copied && <div className="mx-4 mt-1 text-[11.5px] text-ok">Copied.</div>}
 
-      {/* Numbers */}
-      <div className="mx-4 mt-3 grid grid-cols-3 gap-2 text-center">
-        <Stat label="Claimed" value={s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} />
-        <Stat label="Clicks" value={compactNumber(s.clicks)} />
-        <Stat label="Priced for" value={compactNumber(s.promised_reach)} />
-      </div>
-
-      {canReview && (
-        <div className="mx-4 mt-3">
-          <Field label="Verified views">
-            <input type="number" min={0} className="input" value={verified} onChange={(e) => { setVerified(Math.max(0, Number(e.target.value))); setError(null); }} />
-          </Field>
-          <div className="mt-1 text-[12px] text-muted">Pays about <span className="font-semibold text-ink">₦{(estPay / 100).toLocaleString()}</span> ({Math.round(ratio * 100)}% of the fee)</div>
-        </div>
-      )}
-
       {error && <p className="mx-4 mt-3 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 text-[12.5px] text-brand-700">{error}</p>}
 
       {canReview && (
@@ -135,11 +138,3 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-wash px-2 py-2">
-      <div className="text-[15px] font-extrabold text-ink">{value}</div>
-      <div className="text-[10.5px] font-semibold uppercase tracking-wide text-muted">{label}</div>
-    </div>
-  );
-}

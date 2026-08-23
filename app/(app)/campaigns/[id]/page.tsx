@@ -8,13 +8,14 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
-import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { IconArrowLeft } from '@/components/brand/icons';
 import { CampaignDetailsView } from '@/components/campaigns/CampaignInfo';
+import { RejectCampaignModal } from '@/components/campaigns/RejectCampaignModal';
 import { SubmissionCard } from '@/components/campaigns/SubmissionCard';
-import { api, uuid, type Candidate, type CampaignDetail, type PendingSubmission } from '@/lib/api';
+import { api, uuid, type Candidate, type CampaignDetail, type OfferRoster, type PendingSubmission } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, titleCase } from '@/lib/format';
 
@@ -38,7 +39,10 @@ export default function CampaignWorkspacePage() {
     void qc.invalidateQueries({ queryKey: ['nav-counts'] });
   };
   const approve = useMutation({ mutationFn: () => api.post(`/v1/admin/campaigns/${id}/approve`, {}), onSuccess: invalidate });
-  const reject = useMutation({ mutationFn: (reason: string) => api.post(`/v1/admin/campaigns/${id}/reject`, { reason }), onSuccess: () => { setRejecting(false); invalidate(); } });
+  const reject = useMutation({
+    mutationFn: (v: { reason: string; terminal: boolean }) => api.post(`/v1/admin/campaigns/${id}/reject`, v),
+    onSuccess: () => { setRejecting(false); invalidate(); },
+  });
 
   if (q.isLoading || !c) {
     return <div className="flex h-full items-center justify-center text-brand"><Spinner className="h-7 w-7" /></div>;
@@ -105,11 +109,11 @@ export default function CampaignWorkspacePage() {
 
       <div className="mt-5">
         {tab === 'offers' && (live ? <OfferManagement campaignId={c.id} canReview={canReview} onOffered={invalidate} /> : <Notice text="Offers open once the campaign is funded and live." />)}
-        {tab === 'submissions' && <CampaignSubmissions campaignId={c.id} canReview={canReview} />}
+        {tab === 'submissions' && <CampaignSubmissions campaignId={c.id} canReview={canReview} expectedReach={c.expected_reach} confirmedReach={c.confirmed_reach} />}
         {tab === 'details' && <CampaignDetailsView c={c} />}
       </div>
 
-      {rejecting && <ReasonModal title={`Reject ${c.name}?`} placeholder="e.g. The destination link is broken." confirmLabel="Reject" pending={reject.isPending} onClose={() => setRejecting(false)} onConfirm={(r) => reject.mutate(r)} />}
+      {rejecting && <RejectCampaignModal name={c.name} pending={reject.isPending} onClose={() => setRejecting(false)} onConfirm={(v) => reject.mutate(v)} />}
       {funding && c.price && <FundModal campaignId={c.id} amountMinor={c.price.amount_minor} amountDisplay={c.price.amount_display} onClose={() => setFunding(false)} onDone={() => { setFunding(false); invalidate(); }} />}
     </div>
   );
@@ -126,19 +130,26 @@ function Notice({ text }: { text: string }) {
   return <div className="card grid place-items-center p-12 text-center text-[13.5px] text-muted">{text}</div>;
 }
 
-function CampaignSubmissions({ campaignId, canReview }: { campaignId: string; canReview: boolean }) {
+function CampaignSubmissions({ campaignId, canReview, expectedReach, confirmedReach }: { campaignId: string; canReview: boolean; expectedReach: number; confirmedReach: number }) {
   const q = useQuery({ queryKey: ['campaign-submissions'], queryFn: () => api.get<PendingSubmission[]>('/v1/admin/queues/submissions') });
   const items = useMemo(() => (q.data ?? []).filter((s) => s.campaign_id === campaignId), [q.data, campaignId]);
 
-  if (q.isLoading) return <div className="flex h-32 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>;
-  if (items.length === 0) return <Notice text="No proofs waiting for this campaign." />;
-
   return (
     <>
-      <div className="mb-3 text-[14px] font-semibold text-ink">Review proof</div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {items.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
+      <div className="mb-5 grid grid-cols-2 gap-4">
+        <StatCard label="Expected reach" value={compactNumber(expectedReach)} accent="ink" />
+        <StatCard label="Confirmed reach" value={compactNumber(confirmedReach)} accent="ok" />
       </div>
+      <div className="mb-3 text-[14px] font-semibold text-ink">Review proof</div>
+      {q.isLoading ? (
+        <div className="flex h-32 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>
+      ) : items.length === 0 ? (
+        <Notice text="No proofs waiting for this campaign." />
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-2">
+          {items.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
+        </div>
+      )}
     </>
   );
 }
@@ -151,9 +162,67 @@ function fitColor(pct: number): string {
 }
 
 function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: string; onOffered: () => void; canReview: boolean }) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  const roster = useQuery({ queryKey: ['offer-roster', campaignId], queryFn: () => api.get<OfferRoster>(`/v1/campaigns/${campaignId}/offers`) });
+  const r = roster.data;
+
+  if (roster.isLoading || !r) return <div className="flex h-32 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>;
+
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-[15px] font-extrabold text-ink">Offer sent to all eligible promoters</h2>
+          <p className="text-[12.5px] text-muted">Auto-allocated to eligible promoters; top up manually if you need more.</p>
+        </div>
+        {canReview && <Button variant="secondary" onClick={() => setShowPicker((s) => !s)}>{showPicker ? 'Hide' : '+ Send more offers'}</Button>}
+      </div>
+
+      <div className="mb-5 grid grid-cols-3 gap-4">
+        <StatCard label="Total eligible promoters" value={compactNumber(r.total_eligible)} accent="ink" />
+        <StatCard label="Total accepted" value={compactNumber(r.accepted)} accent="ok" />
+        <StatCard label="Unanswered" value={compactNumber(r.unanswered)} accent="brand" />
+      </div>
+
+      {showPicker && <SendMorePicker campaignId={campaignId} canReview={canReview} onOffered={() => { void roster.refetch(); onOffered(); }} />}
+
+      {r.roster.length === 0 ? (
+        <Notice text="No offers out yet — none match the targeting, or allocation hasn't run." />
+      ) : (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {r.roster.map((o) => {
+            const accepted = o.status === 'ACCEPTED';
+            return (
+              <div key={o.promoter_id} className={`card flex items-center gap-3 p-4 ${accepted ? 'border-ok/40' : ''}`}>
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] ${accepted ? 'bg-ok-wash text-ok' : 'bg-wash text-muted'}`}>{accepted ? '✓' : '…'}</span>
+                <Avatar name={o.full_name} className="h-10 w-10 rounded-2xl text-[13px]" />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] font-bold text-ink">{o.full_name ?? 'Unnamed'}</div>
+                  <div className="truncate text-[12px] text-muted">📱 {o.phone_e164} · {o.location_state ?? '—'} · {titleCase(o.platform)}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-[11px] text-muted">Reach</div>
+                  <div className="text-[14px] font-extrabold text-ink">{compactNumber(o.effective_reach)}</div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-[11px] text-muted">Fit</div>
+                  <div className={`text-[14px] font-extrabold ${o.fit_pct != null ? fitColor(o.fit_pct) : 'text-muted'}`}>{o.fit_pct != null ? `${o.fit_pct}%` : '—'}</div>
+                </div>
+                <StatusPill status={o.status === 'SENT' ? 'Unanswered' : titleCase(o.status)} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** The manual top-up: the ranked candidate picker, collapsed by default. */
+function SendMorePicker({ campaignId, onOffered, canReview }: { campaignId: string; onOffered: () => void; canReview: boolean }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [note, setNote] = useState<string | null>(null);
-
   const candidates = useQuery({ queryKey: ['candidates', campaignId], queryFn: () => api.get<Candidate[]>(`/v1/campaigns/${campaignId}/candidates`) });
   const send = useMutation({
     mutationFn: (ids: string[]) => api.post(`/v1/campaigns/${campaignId}/offers`, { promoter_ids: ids }),
@@ -169,35 +238,29 @@ function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: str
   const list = candidates.data ?? [];
 
   return (
-    <section className="card p-5">
+    <section className="card mb-5 p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-[15px] font-extrabold text-ink">Match promoters</h2>
-          <p className="text-[12.5px] text-muted">Eligible promoters, ranked by fit. Select and send offers.</p>
+          <h3 className="text-[14px] font-extrabold text-ink">Send more offers</h3>
+          <p className="text-[12.5px] text-muted">Un-offered eligible promoters, ranked by fit.</p>
         </div>
         {canReview && (
-          <Button onClick={() => send.mutate([...selected])} loading={send.isPending} disabled={selected.size === 0}>
+          <Button size="sm" onClick={() => send.mutate([...selected])} loading={send.isPending} disabled={selected.size === 0}>
             Send {selected.size > 0 ? selected.size : ''} offer{selected.size === 1 ? '' : 's'}
           </Button>
         )}
       </div>
-
       {note && <p className="mt-3 rounded-xl border border-ok/30 bg-ok-wash px-4 py-2.5 text-[13px] text-ok">{note}</p>}
-
       {candidates.isLoading ? (
-        <div className="flex h-24 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>
+        <div className="flex h-20 items-center justify-center text-brand"><Spinner className="h-5 w-5" /></div>
       ) : list.length === 0 ? (
-        <p className="mt-4 text-[13.5px] text-muted">No eligible promoters right now — none match the targeting, or all have been offered.</p>
+        <p className="mt-3 text-[13px] text-muted">Everyone eligible already has an offer.</p>
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className="mt-3 space-y-2">
           {list.map((c) => {
             const checked = selected.has(c.promoter_id);
             return (
-              <button
-                key={c.promoter_id}
-                onClick={() => canReview && toggle(c.promoter_id)}
-                className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${checked ? 'border-brand bg-brand/5' : 'border-rule hover:bg-wash'}`}
-              >
+              <button key={c.promoter_id} onClick={() => canReview && toggle(c.promoter_id)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${checked ? 'border-brand bg-brand/5' : 'border-rule hover:bg-wash'}`}>
                 <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-brand bg-brand text-white' : 'border-rule'}`}>{checked ? '✓' : ''}</span>
                 <Avatar name={c.full_name} />
                 <div className="min-w-0 flex-1">

@@ -5,12 +5,12 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { ReasonModal } from '@/components/ui/ReasonModal';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { IconChevronRight } from '@/components/brand/icons';
 import { CampaignReviewPane } from '@/components/campaigns/CampaignReviewPane';
+import { RejectCampaignModal } from '@/components/campaigns/RejectCampaignModal';
 import { api, type LiveCampaign, type PendingCampaign } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { titleCase } from '@/lib/format';
@@ -60,7 +60,7 @@ function PendingTab() {
     void qc.invalidateQueries({ queryKey: ['nav-counts'] });
   };
   const approve = useMutation({ mutationFn: (id: string) => api.post(`/v1/admin/campaigns/${id}/approve`, {}), onSuccess: () => { setSelected(null); invalidate(); } });
-  const reject = useMutation({ mutationFn: ({ id, reason }: { id: string; reason: string }) => api.post(`/v1/admin/campaigns/${id}/reject`, { reason }), onSuccess: () => { setRejecting(false); setSelected(null); invalidate(); } });
+  const reject = useMutation({ mutationFn: ({ id, reason, terminal }: { id: string; reason: string; terminal: boolean }) => api.post(`/v1/admin/campaigns/${id}/reject`, { reason, terminal }), onSuccess: () => { setRejecting(false); setSelected(null); invalidate(); } });
 
   if (q.isLoading) return <Loading />;
   if (items.length === 0) return <Empty title="No campaigns waiting" sub="Submitted campaigns appear here for review and funding." />;
@@ -101,13 +101,11 @@ function PendingTab() {
       </div>
 
       {rejecting && current && (
-        <ReasonModal
-          title={`Reject ${current.name}?`}
-          placeholder="e.g. The destination link is broken, or the creative violates policy."
-          confirmLabel="Reject campaign"
+        <RejectCampaignModal
+          name={current.name}
           pending={reject.isPending}
           onClose={() => setRejecting(false)}
-          onConfirm={(reason) => reject.mutate({ id: current.id, reason })}
+          onConfirm={({ reason, terminal }) => reject.mutate({ id: current.id, reason, terminal })}
         />
       )}
     </>
