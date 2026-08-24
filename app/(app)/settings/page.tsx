@@ -220,6 +220,8 @@ const FIELDS: { key: keyof PlatformRules; label: string; hint: string }[] = [
   { key: 'proof_validity_days', label: 'Proof validity (days)', hint: 'How long a verification lasts before it decays.' },
   { key: 'min_trust_score', label: 'Min trust to match', hint: 'Promoters below this are filtered out.' },
   { key: 'offer_expiry_hours', label: 'Offer window (hours)', hint: 'How long an offer stays open.' },
+  { key: 'delivery_window_hours', label: 'Delivery window (hours)', hint: 'Deadline for campaigns with no fixed end date.' },
+  { key: 'contingency_buffer_hours', label: 'Contingency buffer (hours)', hint: 'Promoter deadlines sit this far before the client run-window end, leaving room to reclaim a missed slot.' },
   { key: 'withdrawal_minimum_minor', label: 'Min withdrawal (kobo)', hint: 'Smallest payout a promoter can request.' },
 ];
 

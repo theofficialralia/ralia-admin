@@ -52,6 +52,9 @@ export default function CampaignWorkspacePage() {
   const canMoney = can('RECORD_MONEY');
   const live = c.status === 'LIVE' || c.status === 'PAUSED';
   const dateRange = fmtRange(c.starts_at, c.ends_at);
+  const cadenceLabel = c.posts_required > 1
+    ? `${c.posts_required} posts/promoter${c.cadence === 'DAILY' ? ' · daily' : c.cadence === 'WEEKLY' ? ' · weekly' : ''}`
+    : null;
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -66,7 +69,7 @@ export default function CampaignWorkspacePage() {
               <h1 className="text-[26px] font-extrabold tracking-tight text-ink">{c.name}</h1>
               <StatusPill status={c.status} />
             </div>
-            <div className="mt-0.5 text-[13.5px] text-muted">{c.client.name}{dateRange ? ` · ${dateRange}` : ''}</div>
+            <div className="mt-0.5 text-[13.5px] text-muted">{c.client.name}{dateRange ? ` · ${dateRange}` : ''}{cadenceLabel ? ` · ${cadenceLabel}` : ''}</div>
           </div>
         </div>
         <div className="text-right">
@@ -131,8 +134,12 @@ function Notice({ text }: { text: string }) {
 }
 
 function CampaignSubmissions({ campaignId, canReview, expectedReach, confirmedReach }: { campaignId: string; canReview: boolean; expectedReach: number; confirmedReach: number }) {
-  const q = useQuery({ queryKey: ['campaign-submissions'], queryFn: () => api.get<PendingSubmission[]>('/v1/admin/queues/submissions') });
-  const items = useMemo(() => (q.data ?? []).filter((s) => s.campaign_id === campaignId), [q.data, campaignId]);
+  // Campaign-scoped, all verdicts — so approved/rejected proof stays in the history
+  // after it leaves the review queue.
+  const q = useQuery({ queryKey: ['campaign-submissions', campaignId], queryFn: () => api.get<PendingSubmission[]>(`/v1/admin/campaigns/${campaignId}/submissions`) });
+  const items = q.data ?? [];
+  const pending = useMemo(() => items.filter((s) => (s.verdict ?? 'PENDING') === 'PENDING'), [items]);
+  const decided = useMemo(() => items.filter((s) => (s.verdict ?? 'PENDING') !== 'PENDING'), [items]);
 
   return (
     <>
@@ -140,15 +147,31 @@ function CampaignSubmissions({ campaignId, canReview, expectedReach, confirmedRe
         <StatCard label="Expected reach" value={compactNumber(expectedReach)} accent="ink" />
         <StatCard label="Confirmed reach" value={compactNumber(confirmedReach)} accent="ok" />
       </div>
-      <div className="mb-3 text-[14px] font-semibold text-ink">Review proof</div>
+
       {q.isLoading ? (
         <div className="flex h-32 items-center justify-center text-brand"><Spinner className="h-6 w-6" /></div>
       ) : items.length === 0 ? (
-        <Notice text="No proofs waiting for this campaign." />
+        <Notice text="No proof submitted for this campaign yet." />
       ) : (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {items.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
-        </div>
+        <>
+          <div className="mb-3 text-[14px] font-semibold text-ink">Awaiting review{pending.length > 0 ? ` · ${pending.length}` : ''}</div>
+          {pending.length === 0 ? (
+            <Notice text="Nothing waiting — every submission has been reviewed." />
+          ) : (
+            <div className="grid gap-4 xl:grid-cols-2">
+              {pending.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
+            </div>
+          )}
+
+          {decided.length > 0 && (
+            <>
+              <div className="mb-3 mt-8 text-[14px] font-semibold text-ink">Reviewed · {decided.length}</div>
+              <div className="grid gap-4 xl:grid-cols-2">
+                {decided.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
+              </div>
+            </>
+          )}
+        </>
       )}
     </>
   );

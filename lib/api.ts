@@ -143,6 +143,9 @@ export type PendingSubmission = {
   promoter_name: string | null;
   fee: Money;
   promised_reach: number;
+  /** §multi-day: which scheduled post this proof answers, and the total posts. */
+  day_index: number | null;
+  posts_total: number;
   claimed_views: number | null;
   clicks: number;
   auto_flag: boolean;
@@ -151,6 +154,12 @@ export type PendingSubmission = {
   image_url: string | null;
   submitted_at: string;
   artifacts: { id: string; reuse_of_id: string | null }[];
+  // Present on the campaign-scoped history endpoint (all verdicts); the pending
+  // queue omits them (everything there is PENDING).
+  verdict?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  verified_reach?: number | null;
+  reject_reason?: string | null;
+  reviewed_at?: string | null;
 };
 
 export type PendingWithdrawal = {
@@ -253,6 +262,8 @@ export type CampaignDetail = {
   quoted_at: string | null;
   starts_at: string | null;
   ends_at: string | null;
+  cadence: 'ONE_OFF' | 'DAILY' | 'WEEKLY' | 'CUSTOM';
+  posts_required: number;
   client: { org_id: string; name: string; industry: string | null };
   targeting: CampaignTargeting | null;
   assets: CampaignAsset[];
@@ -329,6 +340,8 @@ export type PlatformRules = {
   proof_validity_days: number;
   min_trust_score: number;
   offer_expiry_hours: number;
+  delivery_window_hours: number;
+  contingency_buffer_hours: number;
   withdrawal_minimum_minor: number;
 };
 

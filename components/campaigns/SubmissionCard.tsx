@@ -16,10 +16,16 @@ import { compactNumber, relativeTime } from '@/lib/format';
  */
 export function SubmissionCard({ submission: s, canReview }: { submission: PendingSubmission; canReview: boolean }) {
   const qc = useQueryClient();
-  const [verified, setVerified] = useState<number>(s.claimed_views ?? s.promised_reach);
+  // A decided submission (from the campaign history) is read-only — show its verdict
+  // and final figures, never the review controls.
+  const decided = !!s.verdict && s.verdict !== 'PENDING';
+  const approved = s.verdict === 'APPROVED';
+  const [verified, setVerified] = useState<number>(s.verified_reach ?? s.claimed_views ?? s.promised_reach);
   const [rejecting, setRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [imgOk, setImgOk] = useState(true);
+  const reviewable = canReview && !decided;
 
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: ['submissions'] });
@@ -39,7 +45,9 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
   const ratio = s.promised_reach > 0 ? Math.min(verified / s.promised_reach, 1) : 0;
   const estPay = Math.round(s.fee.amount_minor * ratio);
-  const isHttp = s.image_url?.startsWith('http');
+  // image_url is served by the API (/v1/files/:id) — render whenever set, fall back
+  // only on a real load error.
+  const hasImage = !!s.image_url && imgOk;
 
   function copyUrl() {
     if (!s.public_url) return;
@@ -52,7 +60,17 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
         <div className="flex items-center gap-2.5">
           <Avatar name={s.promoter_name} className="h-9 w-9 rounded-2xl text-[12px]" />
           <div>
-            <div className="text-[14.5px] font-bold text-ink">{s.promoter_name ?? 'Unnamed'}</div>
+            <div className="flex items-center gap-2">
+              <span className="text-[14.5px] font-bold text-ink">{s.promoter_name ?? 'Unnamed'}</span>
+              {s.day_index != null && s.posts_total > 1 && (
+                <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-semibold text-brand-700">Day {s.day_index} of {s.posts_total}</span>
+              )}
+              {decided && (
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${approved ? 'bg-ok-wash text-ok' : 'bg-brand/10 text-brand-700'}`}>
+                  {approved ? 'Approved' : 'Rejected'}
+                </span>
+              )}
+            </div>
             <div className="text-[12px] text-muted">{s.campaign_name} · {relativeTime(s.submitted_at)}</div>
           </div>
         </div>
@@ -61,8 +79,8 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
       {/* Views (admin verifies) + Amount to earn (follows, pro-rata) */}
       <div className="mx-4 mt-3 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-rule p-3">
-          <div className="text-[11px] text-muted">Views</div>
-          {canReview ? (
+          <div className="text-[11px] text-muted">{decided ? (approved ? 'Verified views' : 'Views') : 'Views'}</div>
+          {reviewable ? (
             <input
               type="number"
               min={0}
@@ -76,9 +94,9 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
           <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} · priced for {compactNumber(s.promised_reach)}</div>
         </div>
         <div className="rounded-2xl border border-rule p-3">
-          <div className="text-[11px] text-muted">Amount to earn</div>
-          <div className="text-[22px] font-extrabold text-brand-700">₦{(estPay / 100).toLocaleString()}</div>
-          <div className="text-[11px] text-muted">{Math.round(ratio * 100)}% of {s.fee.amount_display} · {compactNumber(s.clicks)} clicks</div>
+          <div className="text-[11px] text-muted">{decided ? (approved ? 'Paid' : 'Amount') : 'Amount to earn'}</div>
+          <div className="text-[22px] font-extrabold text-brand-700">₦{((decided && !approved ? 0 : estPay) / 100).toLocaleString()}</div>
+          <div className="text-[11px] text-muted">{decided && !approved ? 'not paid' : `${Math.round(ratio * 100)}% of ${s.fee.amount_display}`} · {compactNumber(s.clicks)} clicks</div>
         </div>
       </div>
 
@@ -89,14 +107,14 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
         rel="noreferrer"
         className="relative mx-4 mt-3 flex aspect-video items-center justify-center overflow-hidden rounded-2xl border border-rule bg-wash"
       >
-        {isHttp ? (
+        {hasImage ? (
           <>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.image_url!} alt="proof" className="h-full w-full object-cover" />
+            <img src={s.image_url!} alt="proof" className="h-full w-full object-cover" onError={() => setImgOk(false)} />
             <span className="absolute inset-0 grid place-items-center bg-black/25 text-[13px] font-semibold text-white opacity-0 transition hover:opacity-100">Click to open full size</span>
           </>
         ) : (
-          <span className="text-[12.5px] text-muted">{s.image_url ? 'Open proof' : 'No screenshot attached'}</span>
+          <span className="text-[12.5px] text-muted">No screenshot attached</span>
         )}
         {s.auto_flag && <span className="absolute left-3 top-3 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white">⚠ Possible duplicate</span>}
       </a>
@@ -117,10 +135,17 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
       {error && <p className="mx-4 mt-3 rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 text-[12.5px] text-brand-700">{error}</p>}
 
-      {canReview && (
+      {reviewable && (
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-rule p-4">
           <Button variant="danger" className="w-full" onClick={() => setRejecting(true)}>✕ Reject</Button>
           <Button className="w-full" onClick={() => approve.mutate()} loading={approve.isPending}>Approve &amp; Pay</Button>
+        </div>
+      )}
+
+      {decided && (
+        <div className="mt-4 border-t border-rule p-4 text-[12.5px] text-muted">
+          {approved ? 'Approved' : 'Rejected'}{s.reviewed_at ? ` · ${relativeTime(s.reviewed_at)}` : ''}
+          {!approved && s.reject_reason && <p className="mt-1 text-body">“{s.reject_reason}”</p>}
         </div>
       )}
 
