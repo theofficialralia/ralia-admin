@@ -110,6 +110,7 @@ export type AdminChannel = {
   group_members: number | null;
   active_participants: number | null;
   status: string;
+  screenshot_url?: string | null;
 };
 
 export type PendingPromoter = {

@@ -295,12 +295,50 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
         {channel.verified_at && <span className="text-[11.5px] text-muted">verified {relativeTime(channel.verified_at)}</span>}
       </div>
 
+      {/* Evidence the admin verifies against: the handle/link (insights) + screenshot. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {channel.url ? (
+          <a href={channel.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
+            Open profile / link ↗
+          </a>
+        ) : channel.handle ? (
+          <span className="rounded-full border border-rule px-3 py-1.5 text-[12.5px] text-muted">{channel.handle}</span>
+        ) : (
+          <span className="rounded-full border border-dashed border-rule px-3 py-1.5 text-[12.5px] text-muted">No handle/link provided</span>
+        )}
+        {channel.screenshot_url ? (
+          <a href={channel.screenshot_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
+            View screenshot ↗
+          </a>
+        ) : (
+          <span className="rounded-full border border-dashed border-rule px-3 py-1.5 text-[12.5px] text-muted">No screenshot</span>
+        )}
+      </div>
+
       {canReview && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-rule pt-3">
           {channel.verification_tier === 'SELF' ? (
             <>
-              <Button size="sm" variant="secondary" loading={busy === 'SCREENSHOT'} onClick={() => verify('SCREENSHOT')}>Verify · screenshot</Button>
-              <Button size="sm" variant="secondary" loading={busy === 'INSIGHTS'} onClick={() => verify('INSIGHTS')}>Verify · insights</Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={busy === 'SCREENSHOT'}
+                disabled={!channel.screenshot_url}
+                title={channel.screenshot_url ? undefined : 'The promoter has not uploaded a screenshot for this channel'}
+                onClick={() => verify('SCREENSHOT')}
+              >
+                Verify · screenshot
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={busy === 'INSIGHTS'}
+                disabled={!channel.url && !channel.handle}
+                title={channel.url || channel.handle ? undefined : 'The promoter has not provided a handle or link for this channel'}
+                onClick={() => verify('INSIGHTS')}
+              >
+                Verify · insights
+              </Button>
             </>
           ) : (
             <Button size="sm" variant="ghost" loading={busy === 'unverify'} onClick={unverify}>Drop to self-reported</Button>
