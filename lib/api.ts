@@ -124,6 +124,22 @@ export type PendingPromoter = {
   channels: AdminChannel[];
 };
 
+/** A row in the all-promoters directory (any status). */
+export type AdminPromoter = {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  phone_e164: string;
+  status: string;
+  location_state: string | null;
+  trust_score: number;
+  reliability: number;
+  channels_count: number;
+  top_platform: string | null;
+  total_reach: number;
+  created_at: string;
+};
+
 export type PendingCampaign = {
   id: string;
   name: string;

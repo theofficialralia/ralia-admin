@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, type AdminChannel, type PendingPromoter, type PlatformAnalytics } from '@/lib/api';
+import { api, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, relativeTime, titleCase } from '@/lib/format';
 
@@ -34,6 +34,7 @@ export default function PromotersPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'queue' | 'directory'>('queue');
 
   const q = useQuery({
     queryKey: ['promoters'],
@@ -89,7 +90,18 @@ export default function PromotersPage() {
         <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '—'} accent="brand" />
       </div>
 
-      {promoters.length === 0 ? (
+      <div className="mb-5 inline-flex rounded-full bg-wash p-1 text-[13.5px] font-semibold">
+        <button onClick={() => setView('queue')} className={`rounded-full px-5 py-1.5 transition ${view === 'queue' ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}>
+          Awaiting approval{promoters.length ? ` · ${compactNumber(promoters.length)}` : ''}
+        </button>
+        <button onClick={() => setView('directory')} className={`rounded-full px-5 py-1.5 transition ${view === 'directory' ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}>
+          All promoters
+        </button>
+      </div>
+
+      {view === 'directory' && <PromoterDirectory />}
+
+      {view === 'queue' && (promoters.length === 0 ? (
         <div className="card grid place-items-center p-16 text-center text-muted">
           <div className="text-[15px] font-semibold text-ink">Nothing waiting</div>
           <div className="mt-1 text-[13.5px]">The approval queue is empty.</div>
@@ -133,7 +145,7 @@ export default function PromotersPage() {
             )}
           </div>
         </>
-      )}
+      ))}
 
       {rejecting && current && (
         <RejectModal name={current.full_name} pending={reject.isPending} error={reject.error} onClose={() => setRejecting(false)} onConfirm={(reason) => reject.mutate({ id: current.user_id, reason })} />
@@ -321,5 +333,87 @@ function RejectModal({
         <Button variant="danger" onClick={() => onConfirm(reason)} loading={pending} disabled={reason.trim().length < 5}>Reject</Button>
       </div>
     </Modal>
+  );
+}
+
+/** The full promoter directory — every promoter, any status, searchable + filterable. */
+function PromoterDirectory() {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const q = useQuery({ queryKey: ['promoters-all'], queryFn: () => api.get<AdminPromoter[]>('/v1/admin/promoters') });
+  const rows = q.data ?? [];
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return rows.filter((p) => {
+      if (filter !== 'all' && p.status.toUpperCase() !== filter) return false;
+      if (!term) return true;
+      return (p.full_name ?? '').toLowerCase().includes(term) || p.email.toLowerCase().includes(term) || p.phone_e164.includes(term);
+    });
+  }, [rows, search, filter]);
+
+  if (q.isLoading) return <div className="flex h-40 items-center justify-center text-brand"><Spinner className="h-7 w-7" /></div>;
+
+  return (
+    <>
+      <SearchInput
+        value={search}
+        onChange={setSearch}
+        placeholder="Search all promoters"
+        filter={{
+          value: filter,
+          onChange: setFilter,
+          options: [
+            { value: 'all', label: 'All statuses' },
+            { value: 'ACTIVE', label: 'Active' },
+            { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
+            { value: 'REJECTED', label: 'Rejected' },
+          ],
+        }}
+      />
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-left text-[13.5px]">
+            <thead className="border-b border-rule text-[12px] font-semibold uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-5 py-3.5">Promoter</th>
+                <th className="px-5 py-3.5">Location</th>
+                <th className="px-5 py-3.5 text-right">Channels</th>
+                <th className="px-5 py-3.5 text-right">Reach</th>
+                <th className="px-5 py-3.5 text-right">Trust</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => (
+                <tr key={p.user_id} className="border-b border-rule transition last:border-0 hover:bg-wash">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={p.full_name} className="h-9 w-9 text-[12px]" />
+                      <div>
+                        <div className="font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
+                        <div className="text-[12px] text-muted">{p.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-muted">{p.location_state ?? '—'}</td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">
+                    {p.channels_count}
+                    {p.top_platform ? <span className="ml-1 text-[11px] font-normal text-muted">{titleCase(p.top_platform)}</span> : ''}
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">{compactNumber(p.total_reach)}</td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">{Math.round(p.trust_score)}</td>
+                  <td className="px-5 py-3.5"><StatusPill status={p.status} /></td>
+                  <td className="px-5 py-3.5 text-muted">{relativeTime(p.created_at)}</td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-muted">No promoters match.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
   );
 }
