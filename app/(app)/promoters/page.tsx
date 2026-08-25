@@ -225,7 +225,11 @@ function PromoterDetail({
           </div>
           <div>
             <div className="text-[13px] font-semibold text-ink">Capability</div>
-            <p className="mb-3 text-[12.5px] text-muted">Computed from what they told us and their verified reach. Approving confirms this.</p>
+            <p className="mb-3 text-[12.5px] text-muted">
+              Each role carries a <span className="font-semibold text-ink">0–100 score</span> — how well-suited this promoter is to that kind of
+              work, computed from what they told us and their verified reach. The label is the band it falls in
+              (Emerging &lt;40 · Developing 40–59 · Established 60–79 · Elite 80+). Approving confirms it.
+            </p>
             {promoter.roles.length === 0 ? (
               <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
             ) : (
@@ -233,9 +237,9 @@ function PromoterDetail({
                 {promoter.roles.map((role) => {
                   const score = promoter.capability_preview[role] ?? 0;
                   return (
-                    <div key={role} className="rounded-xl border border-rule px-3.5 py-2">
+                    <div key={role} className="rounded-xl border border-rule px-3.5 py-2" title={`${titleCase(role)} capability: ${score}/100 (${capabilityTier(score)})`}>
                       <div className="text-[12px] font-semibold text-ink">{titleCase(role)}</div>
-                      <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted"> · {capabilityTier(score)}</span></div>
+                      <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted">/100 · {capabilityTier(score)}</span></div>
                     </div>
                   );
                 })}
