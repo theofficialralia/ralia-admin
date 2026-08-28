@@ -85,7 +85,7 @@ export function uuid(): string {
 // ─────────────────────────────────────────────────────────────
 
 export type Tokens = { access_token: string; refresh_token: string; expires_in: number; token_type: string };
-export type Capability = 'REVIEW_EVIDENCE' | 'RECORD_MONEY';
+export type Capability = 'REVIEW_EVIDENCE' | 'RECORD_MONEY' | 'MANAGE_TEAM';
 export type Me = {
   id: string;
   email: string;
@@ -373,6 +373,8 @@ export type AuditEntry = {
 };
 
 export type TeamMember = { id: string; email: string; status: string; capabilities: Capability[] };
+export type PendingInvite = { id: string; email: string; capabilities: Capability[]; expires_at: string; created_at: string };
+export type Team = { admins: TeamMember[]; pending_invites: PendingInvite[] };
 
 export type StatusCount = { status: string; count: number };
 
