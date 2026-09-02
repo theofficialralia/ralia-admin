@@ -125,6 +125,9 @@ export type PendingPromoter = {
   channels: AdminChannel[];
 };
 
+/** A single promoter opened from the directory (any status) — includes their status. */
+export type PromoterFull = PendingPromoter & { status: string };
+
 /** A row in the all-promoters directory (any status). */
 export type AdminPromoter = {
   user_id: string;

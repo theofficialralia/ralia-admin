@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics } from '@/lib/api';
+import { api, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics, type PromoterFull } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, relativeTime, titleCase } from '@/lib/format';
 
@@ -99,7 +99,7 @@ export default function PromotersPage() {
         </button>
       </div>
 
-      {view === 'directory' && <PromoterDirectory />}
+      {view === 'directory' && <PromoterDirectory canReview={can('REVIEW_EVIDENCE')} />}
 
       {view === 'queue' && (promoters.length === 0 ? (
         <div className="card grid place-items-center p-16 text-center text-muted">
@@ -272,6 +272,14 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
     setBusy('unverify');
     try { await api.post(`/v1/admin/channels/${channel.id}/unverify`, { reason: 'Proof not accepted' }); onChanged(); } finally { setBusy(null); }
   }
+  async function approveChannel() {
+    setBusy('approve');
+    try { await api.post(`/v1/admin/channels/${channel.id}/approve`, {}); onChanged(); } finally { setBusy(null); }
+  }
+  async function rejectChannel() {
+    setBusy('reject');
+    try { await api.post(`/v1/admin/channels/${channel.id}/reject`, { reason: 'Channel not approved' }); onChanged(); } finally { setBusy(null); }
+  }
 
   const basis = channel.is_group ? `${compactNumber(channel.active_participants ?? 0)} active` : `${compactNumber(channel.claimed_audience)} claimed`;
 
@@ -290,10 +298,25 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
           <div className="text-[15px] font-extrabold text-ink">{compactNumber(channel.claimed_audience)}</div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <StatusPill status={channel.status} />
         <StatusPill status={channel.verification_tier} />
         {channel.verified_at && <span className="text-[11.5px] text-muted">verified {relativeTime(channel.verified_at)}</span>}
       </div>
+
+      {canReview && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
+          <span className="text-[12px] font-semibold text-muted">Channel:</span>
+          {channel.status !== 'ACTIVE' && (
+            <Button size="sm" loading={busy === 'approve'} onClick={approveChannel}>✓ Approve</Button>
+          )}
+          {channel.status !== 'REJECTED' && (
+            <Button size="sm" variant="danger" loading={busy === 'reject'} onClick={rejectChannel}>✕ Reject</Button>
+          )}
+          {channel.status === 'ACTIVE' && <span className="text-[12px] font-semibold text-ok">Approved — matched on</span>}
+          {channel.status === 'REJECTED' && <span className="text-[12px] font-semibold text-muted">Rejected — not matched</span>}
+        </div>
+      )}
 
       {/* Evidence the admin verifies against: the handle/link (insights) + screenshot. */}
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -379,9 +402,10 @@ function RejectModal({
 }
 
 /** The full promoter directory — every promoter, any status, searchable + filterable. */
-function PromoterDirectory() {
+function PromoterDirectory({ canReview }: { canReview: boolean }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
+  const [openId, setOpenId] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['promoters-all'], queryFn: () => api.get<AdminPromoter[]>('/v1/admin/promoters') });
   const rows = q.data ?? [];
   const filtered = useMemo(() => {
@@ -428,7 +452,7 @@ function PromoterDirectory() {
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.user_id} className="border-b border-rule transition last:border-0 hover:bg-wash">
+                <tr key={p.user_id} onClick={() => setOpenId(p.user_id)} className="cursor-pointer border-b border-rule transition last:border-0 hover:bg-wash">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
                       <Avatar name={p.full_name} className="h-9 w-9 text-[12px]" />
@@ -456,6 +480,53 @@ function PromoterDirectory() {
           </table>
         </div>
       </div>
+
+      {openId && <PromoterModal userId={openId} canReview={canReview} onClose={() => setOpenId(null)} />}
     </>
+  );
+}
+
+/** Opens any promoter (from the directory) to review/approve their channels and
+ *  deactivate/reactivate them — not just the pending-approval queue. */
+function PromoterModal({ userId, canReview, onClose }: { userId: string; canReview: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['promoter', userId], queryFn: () => api.get<PromoterFull>(`/v1/admin/promoters/${userId}`) });
+  const p = q.data;
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ['promoter', userId] }); void qc.invalidateQueries({ queryKey: ['promoters-all'] }); };
+
+  const setActive = useMutation({
+    mutationFn: (active: boolean) => api.post(`/v1/admin/promoters/${userId}/${active ? 'reactivate' : 'deactivate'}`),
+    onSuccess: refresh,
+  });
+
+  return (
+    <Modal title={p?.full_name ?? 'Promoter'} onClose={onClose}>
+      {!p ? (
+        <div className="grid h-32 place-items-center text-brand"><Spinner className="h-6 w-6" /></div>
+      ) : (
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="text-[12.5px] text-muted">📱 {p.phone_e164} · ✉ {p.email} · 📍 {p.location_state ?? '—'}</div>
+            <StatusPill status={p.status} />
+          </div>
+
+          {canReview && (p.status === 'ACTIVE' || p.status === 'SUSPENDED') && (
+            p.status === 'SUSPENDED' ? (
+              <Button size="sm" loading={setActive.isPending} onClick={() => setActive.mutate(true)}>Reactivate promoter</Button>
+            ) : (
+              <Button size="sm" variant="danger" loading={setActive.isPending} onClick={() => setActive.mutate(false)}>Deactivate promoter</Button>
+            )
+          )}
+
+          <div className="text-[13px] font-semibold text-ink">Channels · {p.channels.length}</div>
+          <div className="space-y-3">
+            {p.channels.length === 0 && <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No channels submitted.</div>}
+            {p.channels.map((c) => (
+              <ChannelRow key={c.id} channel={c} canReview={canReview} onChanged={refresh} />
+            ))}
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
