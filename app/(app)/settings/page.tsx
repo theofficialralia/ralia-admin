@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -454,6 +455,7 @@ function AuditTab() {
 }
 
 function SecurityTab() {
+  const [changing, setChanging] = useState(false);
   return (
     <div className="card max-w-2xl p-6">
       <h2 className="text-[16px] font-extrabold text-ink">Security</h2>
@@ -464,17 +466,56 @@ function SecurityTab() {
             <div className="text-[14px] font-semibold text-ink">Password</div>
             <div className="text-[12.5px] text-muted">Change the password you use to sign in.</div>
           </div>
-          <Button variant="secondary" disabled title="Password change ships with the account API">Change</Button>
+          <Button variant="secondary" onClick={() => setChanging(true)}>Change</Button>
         </div>
         <div className="flex items-center justify-between gap-4 rounded-xl border border-rule p-4">
           <div>
             <div className="text-[14px] font-semibold text-ink">Two-factor authentication</div>
             <div className="text-[12.5px] text-muted">Add a second step when signing in.</div>
           </div>
-          <Button variant="secondary" disabled title="2FA ships with the account API">Enable</Button>
+          <Button variant="secondary" disabled title="2FA is coming soon">Enable</Button>
         </div>
       </div>
-      <Note>These controls are wired to the UI; the account-security API is not yet available.</Note>
+      {changing && <ChangePasswordModal onClose={() => setChanging(false)} />}
     </div>
+  );
+}
+
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  const [current, setCurrent] = useState('');
+  const [next, setNext] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+  const save = useMutation({
+    mutationFn: () => api.post('/v1/auth/change-password', { current_password: current, new_password: next }),
+    onSuccess: () => setDone(true),
+    onError: (e) => setErr(e instanceof ApiError ? e.message : 'Could not change your password.'),
+  });
+  function submit() {
+    if (next.length < 10) return setErr('Choose a new password of at least 10 characters.');
+    if (next !== confirm) return setErr('Those passwords don’t match.');
+    setErr(null); save.mutate();
+  }
+  return (
+    <Modal title="Change password" onClose={onClose}>
+      {done ? (
+        <div className="space-y-4">
+          <p className="text-[13.5px] text-body">Your password was changed. Other sessions have been signed out.</p>
+          <Button className="w-full" onClick={onClose}>Done</Button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <Field label="Current password"><PasswordInput value={current} onChange={(e) => setCurrent(e.target.value)} autoComplete="current-password" /></Field>
+          <Field label="New password"><PasswordInput value={next} onChange={(e) => setNext(e.target.value)} autoComplete="new-password" placeholder="At least 10 characters" /></Field>
+          <Field label="Confirm new password"><PasswordInput value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="new-password" /></Field>
+          {err && <p className="text-[12.5px] text-brand-700">{err}</p>}
+          <div className="flex gap-2.5 pt-1">
+            <Button className="flex-1" loading={save.isPending} onClick={submit}>Change password</Button>
+            <Button variant="secondary" className="flex-1" onClick={onClose}>Cancel</Button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
