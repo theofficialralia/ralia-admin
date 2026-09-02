@@ -44,21 +44,37 @@ export function TargetingPills({ targeting }: { targeting: CampaignTargeting }) 
   );
 }
 
-/** Asset tiles. There are no served image URLs, so we render labelled kind tiles. */
+/** Asset tiles. Uploaded files are served at /v1/files/:id, so image assets show a
+ *  clickable thumbnail (opens full size) and other files a "View file" link. */
 export function AssetsGrid({ assets }: { assets: CampaignAsset[] }) {
   if (!assets.length) return <p className="text-[13px] text-muted">No assets uploaded — the client asked Ralia to design the creative.</p>;
+  const isImage = (kind: string) => ['POSTER', 'IMAGE', 'LOGO'].includes(kind.toUpperCase());
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-      {assets.map((a) => (
-        <div key={a.id} className="flex aspect-square flex-col justify-between overflow-hidden rounded-2xl border border-rule bg-gradient-to-br from-wash to-brand/5 p-3">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-brand-700">{titleCase(a.kind)}</span>
-          {a.caption_text ? (
-            <span className="line-clamp-3 text-[11.5px] text-body">“{a.caption_text}”</span>
-          ) : (
-            <span className="text-[11px] text-muted">{a.file_id ? 'Uploaded file' : '—'}</span>
-          )}
-        </div>
-      ))}
+      {assets.map((a) => {
+        const url = a.file_id ? `/v1/files/${a.file_id}` : null;
+        if (url && isImage(a.kind)) {
+          return (
+            <a key={a.id} href={url} target="_blank" rel="noreferrer" className="group relative block aspect-square overflow-hidden rounded-2xl border border-rule">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={titleCase(a.kind)} className="h-full w-full object-cover transition group-hover:scale-105" />
+              <span className="absolute left-2 top-2 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">{titleCase(a.kind)}</span>
+            </a>
+          );
+        }
+        return (
+          <div key={a.id} className="flex aspect-square flex-col justify-between overflow-hidden rounded-2xl border border-rule bg-gradient-to-br from-wash to-brand/5 p-3">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-brand-700">{titleCase(a.kind)}</span>
+            {a.caption_text ? (
+              <span className="line-clamp-3 text-[11.5px] text-body">“{a.caption_text}”</span>
+            ) : url ? (
+              <a href={url} target="_blank" rel="noreferrer" className="text-[11.5px] font-semibold text-brand-700 underline">View file ↗</a>
+            ) : (
+              <span className="text-[11px] text-muted">—</span>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -91,7 +107,9 @@ export function CampaignDetailsView({ c }: { c: CampaignDetail }) {
         {c.destination_url && (
           <>
             <div className="mt-4 text-[12px] font-semibold text-muted">Destination</div>
-            <p className="break-all text-[13.5px] text-brand-700">{c.destination_url}</p>
+            <a href={c.destination_url} target="_blank" rel="noreferrer" className="break-all text-[13.5px] font-semibold text-brand-700 underline hover:opacity-80">
+              {c.destination_url} ↗
+            </a>
           </>
         )}
       </section>

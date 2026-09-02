@@ -337,6 +337,7 @@ export type AdminClient = {
   org_id: string;
   name: string;
   email: string;
+  phone: string | null;
   industry: string | null;
   status: string;
   campaigns_created: number;

@@ -17,11 +17,12 @@ export default function AnalyticsPage() {
     <div>
       <PageHeader title="Performance analytics" subtitle="How the marketplace is doing right now." />
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatCard label="Total GMV (funded)" value={a.gmv.amount_display} accent="brand" sub="Client spend taken live" />
         <StatCard label="Revenue / commissions" value={a.revenue.amount_display} accent="ok" delta={`${a.take_rate_pct}% take rate`} deltaTone="muted" />
         <StatCard label="Live campaigns" value={String(a.live_campaigns)} accent="warn" />
-        <StatCard label="Active promoters" value={compactNumber(a.active_promoters)} accent="ink" sub={`${a.active_clients} active clients`} />
+        <StatCard label="Active promoters" value={compactNumber(a.active_promoters)} accent="ink" />
+        <StatCard label="Active clients" value={compactNumber(a.active_clients)} accent="ink" />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-2">

@@ -13,6 +13,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { api, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics, type PromoterFull } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { downloadCsv } from '@/lib/csv';
 import { compactNumber, relativeTime, titleCase } from '@/lib/format';
 
 /** Capability band, matching the backend §7 tiers. */
@@ -419,23 +420,35 @@ function PromoterDirectory({ canReview }: { canReview: boolean }) {
 
   if (q.isLoading) return <div className="flex h-40 items-center justify-center text-brand"><Spinner className="h-7 w-7" /></div>;
 
+  function exportCsv() {
+    downloadCsv(
+      `ralia-promoters-${new Date().toISOString().slice(0, 10)}`,
+      ['Name', 'Email', 'Phone', 'Location', 'Status', 'Channels', 'Top platform', 'Total reach', 'Trust', 'Joined'],
+      filtered.map((p) => [p.full_name ?? '', p.email, p.phone_e164, p.location_state ?? '', p.status, p.channels_count, p.top_platform ?? '', p.total_reach, Math.round(p.trust_score), new Date(p.created_at).toISOString().slice(0, 10)]),
+    );
+  }
+
   return (
     <>
-      <SearchInput
-        value={search}
-        onChange={setSearch}
-        placeholder="Search all promoters"
-        filter={{
-          value: filter,
-          onChange: setFilter,
-          options: [
-            { value: 'all', label: 'All statuses' },
-            { value: 'ACTIVE', label: 'Active' },
-            { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
-            { value: 'REJECTED', label: 'Rejected' },
-          ],
-        }}
-      />
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex-1"><SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search all promoters"
+          filter={{
+            value: filter,
+            onChange: setFilter,
+            options: [
+              { value: 'all', label: 'All statuses' },
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+              { value: 'REJECTED', label: 'Rejected' },
+            ],
+          }}
+        /></div>
+        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Download the listed promoters as CSV for bulk messaging">↓ Export CSV</Button>
+      </div>
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-[13.5px]">
