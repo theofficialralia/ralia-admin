@@ -41,6 +41,7 @@ export function Sidebar({
   const role = roleFromCapabilities(user?.capabilities);
 
   async function signOut() {
+    if (!window.confirm('Log out of the admin console?')) return;
     await logout();
     router.replace('/login');
   }
