@@ -20,7 +20,7 @@ export default function SubmissionsPage() {
 
   return (
     <div>
-      <PageHeader crumb="Queue · Evidence" title="Review proof" subtitle="Check the screenshot against the count, then approve — the promoter is paid pro-rata on the verified views." />
+      <PageHeader crumb="Queue · Evidence" title="Review proof" subtitle="Check the screenshot against the count, then approve - the promoter is paid pro-rata on the verified views." />
 
       {items.length === 0 ? (
         <div className="card grid place-items-center p-16 text-center text-muted">

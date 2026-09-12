@@ -27,7 +27,7 @@ export function TargetingPills({ targeting }: { targeting: CampaignTargeting }) 
   const pills: string[] = [];
   if (targeting.states.length) pills.push(...targeting.states);
   else pills.push('Nationwide');
-  if (targeting.age_min || targeting.age_max) pills.push(`${targeting.age_min ?? 18}–${targeting.age_max ?? '60+'}`);
+  if (targeting.age_min || targeting.age_max) pills.push(`${targeting.age_min ?? 18}-${targeting.age_max ?? '60+'}`);
   else pills.push('All ages');
   targeting.genders.forEach((g) => pills.push(titleCase(g)));
   targeting.platforms.forEach((p) => pills.push(titleCase(p)));
@@ -47,7 +47,7 @@ export function TargetingPills({ targeting }: { targeting: CampaignTargeting }) 
 /** Asset tiles. Uploaded files are served at /v1/files/:id, so image assets show a
  *  clickable thumbnail (opens full size) and other files a "View file" link. */
 export function AssetsGrid({ assets }: { assets: CampaignAsset[] }) {
-  if (!assets.length) return <p className="text-[13px] text-muted">No assets uploaded — the client asked Ralia to design the creative.</p>;
+  if (!assets.length) return <p className="text-[13px] text-muted">No assets uploaded - the client asked Ralia to design the creative.</p>;
   const isImage = (kind: string) => ['POSTER', 'IMAGE', 'LOGO'].includes(kind.toUpperCase());
   return (
     <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
@@ -70,7 +70,7 @@ export function AssetsGrid({ assets }: { assets: CampaignAsset[] }) {
             ) : url ? (
               <a href={url} target="_blank" rel="noreferrer" className="text-[11.5px] font-semibold text-brand-700 underline">View file ↗</a>
             ) : (
-              <span className="text-[11px] text-muted">—</span>
+              <span className="text-[11px] text-muted">-</span>
             )}
           </div>
         );

@@ -62,8 +62,8 @@ function AccountTab() {
   const role = roleFromCapabilities(user?.capabilities);
   const rows: [string, string][] = [
     ['Display name', name],
-    ['Email', user?.email ?? '—'],
-    ['Phone', user?.phone_e164 ?? '—'],
+    ['Email', user?.email ?? '-'],
+    ['Phone', user?.phone_e164 ?? '-'],
     ['Role', role],
     ['Capabilities', user?.capabilities?.length ? user.capabilities.map(titleCase).join(' · ') : 'None'],
     ['Account status', titleCase(user?.status ?? 'active')],
@@ -80,13 +80,13 @@ function AccountTab() {
           </div>
         ))}
       </dl>
-      <Note>Profile edits are managed by an administrator — this view is read-only.</Note>
+      <Note>Profile edits are managed by an administrator - this view is read-only.</Note>
     </div>
   );
 }
 
 const ROLE_CARDS = [
-  { name: 'Super Admin', desc: 'Full access — users, campaigns, submissions, withdrawals, settings and more.' },
+  { name: 'Super Admin', desc: 'Full access - users, campaigns, submissions, withdrawals, settings and more.' },
   { name: 'Campaign Reviewer', desc: 'Approves or rejects users and campaign content. No access to withdrawals or settings.' },
   { name: 'Finance', desc: 'Approves withdrawals and records campaign funding. No content-moderation access.' },
   { name: 'Support', desc: 'View-only across all queues. Cannot approve or reject anything.' },
@@ -178,7 +178,7 @@ function TeamTab() {
                             )}
                           </div>
                         ) : (
-                          <span className="text-[13px] text-muted">—</span>
+                          <span className="text-[13px] text-muted">-</span>
                         )}
                       </td>
                     </tr>
@@ -300,7 +300,7 @@ function CapabilitiesModal({ member, onClose, onDone, onError }: { member: TeamM
   }
 
   return (
-    <Modal title={`Capabilities — ${nameFromEmail(member.email)}`} onClose={onClose}>
+    <Modal title={`Capabilities - ${nameFromEmail(member.email)}`} onClose={onClose}>
       <div className="space-y-4">
         <CapabilityPicker selected={caps} onToggle={toggle} />
         {err && <p className="text-[12.5px] text-brand-700">{err}</p>}
@@ -400,7 +400,7 @@ function RulesTab() {
   return (
     <div className="card max-w-3xl p-6">
       <h2 className="text-[16px] font-extrabold text-ink">Platform rules</h2>
-      <p className="mb-4 text-[13px] text-muted">Changing these never reprices a campaign that already quoted — it only affects new quotes and matches.</p>
+      <p className="mb-4 text-[13px] text-muted">Changing these never reprices a campaign that already quoted - it only affects new quotes and matches.</p>
       <div className="grid gap-4 sm:grid-cols-2">
         {FIELDS.map((f) => (
           <Field key={f.key} label={f.label} hint={f.hint}>

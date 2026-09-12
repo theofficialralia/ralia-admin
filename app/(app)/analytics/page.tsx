@@ -33,7 +33,7 @@ export default function AnalyticsPage() {
   );
 }
 
-/** Palette cycled across bar rows — brand red, deep red, ink, green, amber. */
+/** Palette cycled across bar rows - brand red, deep red, ink, green, amber. */
 const BAR_COLORS = ['bg-brand', 'bg-brand-700', 'bg-ink/70', 'bg-ok', 'bg-warn'];
 
 function BarCard({ title, subtitle, rows }: { title: string; subtitle: string; rows: StatusCount[] }) {

@@ -11,7 +11,7 @@ import { titleCase } from '@/lib/format';
 /**
  * The rich right-hand review pane for a pending campaign: client + budget,
  * objective/slots, targeting pills, creative summary, asset tiles, and the
- * Reject / Accept actions — mirroring the design's Pending detail.
+ * Reject / Accept actions - mirroring the design's Pending detail.
  */
 export function CampaignReviewPane({
   id,

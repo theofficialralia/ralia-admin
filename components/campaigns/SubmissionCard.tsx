@@ -16,7 +16,7 @@ import { compactNumber, relativeTime } from '@/lib/format';
  */
 export function SubmissionCard({ submission: s, canReview }: { submission: PendingSubmission; canReview: boolean }) {
   const qc = useQueryClient();
-  // A decided submission (from the campaign history) is read-only — show its verdict
+  // A decided submission (from the campaign history) is read-only - show its verdict
   // and final figures, never the review controls.
   const decided = !!s.verdict && s.verdict !== 'PENDING';
   const approved = s.verdict === 'APPROVED';
@@ -45,7 +45,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
   const ratio = s.promised_reach > 0 ? Math.min(verified / s.promised_reach, 1) : 0;
   const estPay = Math.round(s.fee.amount_minor * ratio);
-  // image_url is served by the API (/v1/files/:id) — render whenever set, fall back
+  // image_url is served by the API (/v1/files/:id) - render whenever set, fall back
   // only on a real load error.
   const hasImage = !!s.image_url && imgOk;
 
@@ -91,7 +91,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
           ) : (
             <div className="text-[22px] font-extrabold text-ink">{compactNumber(verified)}</div>
           )}
-          <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} · priced for {compactNumber(s.promised_reach)}</div>
+          <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '-'} · priced for {compactNumber(s.promised_reach)}</div>
         </div>
         <div className="rounded-2xl border border-rule p-3">
           <div className="text-[11px] text-muted">{decided ? (approved ? 'Paid' : 'Amount') : 'Amount to earn'}</div>

@@ -1,6 +1,6 @@
 /**
  * Admin token storage. Namespaced apart from the client app so the two can run
- * on the same machine without colliding. localStorage for the MVP — an httpOnly
+ * on the same machine without colliding. localStorage for the MVP - an httpOnly
  * refresh cookie is the hardening follow-up.
  */
 const ACCESS = 'ralia.admin.access';

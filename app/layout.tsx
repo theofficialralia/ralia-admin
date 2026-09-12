@@ -12,7 +12,7 @@ const urbanist = Urbanist({
 });
 
 export const metadata: Metadata = {
-  title: 'Ralia — Admin',
+  title: 'Ralia - Admin',
   description: 'Approvals, matching, evidence review, payouts and reconciliation for the Ralia marketplace.',
 };
 

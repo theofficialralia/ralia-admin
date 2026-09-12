@@ -85,10 +85,10 @@ export default function PromotersPage() {
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total promoters" value={total != null ? compactNumber(total) : '—'} accent="ink" />
-        <StatCard label="Approved" value={approved != null ? compactNumber(approved) : '—'} accent="ok" />
+        <StatCard label="Total promoters" value={total != null ? compactNumber(total) : '-'} accent="ink" />
+        <StatCard label="Approved" value={approved != null ? compactNumber(approved) : '-'} accent="ok" />
         <StatCard label="Pending" value={compactNumber(pending)} accent="warn" />
-        <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '—'} accent="brand" />
+        <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '-'} accent="brand" />
       </div>
 
       <div className="mb-5 inline-flex rounded-full bg-wash p-1 text-[13.5px] font-semibold">
@@ -125,7 +125,7 @@ export default function PromotersPage() {
                     <Avatar name={p.full_name} className="h-11 w-11 text-[14px]" />
                     <div className="min-w-0">
                       <div className="truncate text-[14.5px] font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
-                      <div className="truncate text-[12px] text-muted">{p.phone_e164} · {p.location_state ?? '—'}</div>
+                      <div className="truncate text-[12px] text-muted">{p.phone_e164} · {p.location_state ?? '-'}</div>
                     </div>
                   </div>
                 </button>
@@ -181,7 +181,7 @@ function PromoterDetail({
             <div className="text-[19px] font-extrabold text-ink">{promoter.full_name ?? 'Unnamed'}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
               <span>📱 {promoter.phone_e164}</span>
-              <span>📍 {promoter.location_state ?? '—'}</span>
+              <span>📍 {promoter.location_state ?? '-'}</span>
               <span>✉ {promoter.email}</span>
             </div>
           </div>
@@ -227,9 +227,9 @@ function PromoterDetail({
           <div>
             <div className="text-[13px] font-semibold text-ink">Capability</div>
             <p className="mb-3 text-[12.5px] text-muted">
-              Each role carries a <span className="font-semibold text-ink">0–100 score</span> — how well-suited this promoter is to that kind of
+              Each role carries a <span className="font-semibold text-ink">0-100 score</span> - how well-suited this promoter is to that kind of
               work, computed from what they told us and their verified reach. The label is the band it falls in
-              (Emerging &lt;40 · Developing 40–59 · Established 60–79 · Elite 80+). Approving confirms it.
+              (Emerging &lt;40 · Developing 40-59 · Established 60-79 · Elite 80+). Approving confirms it.
             </p>
             {promoter.roles.length === 0 ? (
               <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
@@ -314,8 +314,8 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
           {channel.status !== 'REJECTED' && (
             <Button size="sm" variant="danger" loading={busy === 'reject'} onClick={rejectChannel}>✕ Reject</Button>
           )}
-          {channel.status === 'ACTIVE' && <span className="text-[12px] font-semibold text-ok">Approved — matched on</span>}
-          {channel.status === 'REJECTED' && <span className="text-[12px] font-semibold text-muted">Rejected — not matched</span>}
+          {channel.status === 'ACTIVE' && <span className="text-[12px] font-semibold text-ok">Approved - matched on</span>}
+          {channel.status === 'REJECTED' && <span className="text-[12px] font-semibold text-muted">Rejected - not matched</span>}
         </div>
       )}
 
@@ -389,11 +389,11 @@ function RejectModal({
   const [reason, setReason] = useState('');
   return (
     <Modal title={`Reject ${name ?? 'promoter'}?`} onClose={onClose}>
-      <p className="text-[13.5px] text-muted">A reason is required — the promoter sees it and can fix their profile.</p>
+      <p className="text-[13.5px] text-muted">A reason is required - the promoter sees it and can fix their profile.</p>
       <Field>
         <textarea className="input mt-3 min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. The WhatsApp screenshot does not show a follower count." />
       </Field>
-      {error != null && <p className="mt-2 text-[12px] text-brand-700">Could not reject — try again.</p>}
+      {error != null && <p className="mt-2 text-[12px] text-brand-700">Could not reject - try again.</p>}
       <div className="mt-5 flex justify-end gap-3">
         <Button variant="secondary" onClick={onClose} disabled={pending}>Cancel</Button>
         <Button variant="danger" onClick={() => onConfirm(reason)} loading={pending} disabled={reason.trim().length < 5}>Reject</Button>
@@ -402,7 +402,7 @@ function RejectModal({
   );
 }
 
-/** The full promoter directory — every promoter, any status, searchable + filterable. */
+/** The full promoter directory - every promoter, any status, searchable + filterable. */
 function PromoterDirectory({ canReview }: { canReview: boolean }) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -475,7 +475,7 @@ function PromoterDirectory({ canReview }: { canReview: boolean }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-muted">{p.location_state ?? '—'}</td>
+                  <td className="px-5 py-3.5 text-muted">{p.location_state ?? '-'}</td>
                   <td className="px-5 py-3.5 text-right font-semibold text-ink">
                     {p.channels_count}
                     {p.top_platform ? <span className="ml-1 text-[11px] font-normal text-muted">{titleCase(p.top_platform)}</span> : ''}
@@ -500,7 +500,7 @@ function PromoterDirectory({ canReview }: { canReview: boolean }) {
 }
 
 /** Opens any promoter (from the directory) to review/approve their channels and
- *  deactivate/reactivate them — not just the pending-approval queue. */
+ *  deactivate/reactivate them - not just the pending-approval queue. */
 function PromoterModal({ userId, canReview, onClose }: { userId: string; canReview: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['promoter', userId], queryFn: () => api.get<PromoterFull>(`/v1/admin/promoters/${userId}`) });
@@ -519,7 +519,7 @@ function PromoterModal({ userId, canReview, onClose }: { userId: string; canRevi
       ) : (
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[12.5px] text-muted">📱 {p.phone_e164} · ✉ {p.email} · 📍 {p.location_state ?? '—'}</div>
+            <div className="text-[12.5px] text-muted">📱 {p.phone_e164} · ✉ {p.email} · 📍 {p.location_state ?? '-'}</div>
             <StatusPill status={p.status} />
           </div>
 

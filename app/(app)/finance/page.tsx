@@ -128,7 +128,7 @@ function FailModal({ withdrawal, onClose, onDone }: { withdrawal: PendingWithdra
   }
   return (
     <Modal title="Hold this withdrawal" onClose={onClose}>
-      <p className="text-[13.5px] text-muted">The promoter’s balance is untouched — nothing was posted. They can request it again.</p>
+      <p className="text-[13.5px] text-muted">The promoter’s balance is untouched - nothing was posted. They can request it again.</p>
       <Field label="Reason (shown to the promoter)">
         <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Bank details don’t match the account name" />
       </Field>

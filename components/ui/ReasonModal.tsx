@@ -23,7 +23,7 @@ export function ReasonModal({
   const [reason, setReason] = useState('');
   return (
     <Modal title={title} onClose={onClose}>
-      <p className="text-[13.5px] text-muted">A reason is required — it is recorded and shown to the affected party.</p>
+      <p className="text-[13.5px] text-muted">A reason is required - it is recorded and shown to the affected party.</p>
       <Field>
         <textarea className="input mt-3 min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} placeholder={placeholder} />
       </Field>

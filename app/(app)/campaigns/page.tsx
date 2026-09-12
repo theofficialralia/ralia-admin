@@ -83,7 +83,7 @@ function PendingTab() {
                   <div className="truncate text-[12px] text-muted">{titleCase(c.objective)} · {c.slots_total} slots</div>
                 </div>
               </div>
-              <div className="mt-2.5 text-[15px] font-extrabold text-ink">{c.price?.amount_display ?? '—'}</div>
+              <div className="mt-2.5 text-[15px] font-extrabold text-ink">{c.price?.amount_display ?? '-'}</div>
             </button>
           ))}
           {filtered.length === 0 && <div className="rounded-2xl border border-rule p-4 text-center text-[13px] text-muted">No match.</div>}
@@ -122,7 +122,7 @@ function AcceptedTab() {
   }, [items, search]);
 
   if (q.isLoading) return <Loading />;
-  if (items.length === 0) return <Empty title="No accepted campaigns yet" sub="Funded, live campaigns appear here — open one to manage offers and proofs." />;
+  if (items.length === 0) return <Empty title="No accepted campaigns yet" sub="Funded, live campaigns appear here - open one to manage offers and proofs." />;
 
   return (
     <>
@@ -134,7 +134,7 @@ function AcceptedTab() {
             <div className="min-w-0 flex-1">
               <div className="truncate text-[15px] font-bold text-ink">{c.name}</div>
               <div className="truncate text-[12px] text-muted">{c.client_name} · {c.slots_filled}/{c.slots_total} filled</div>
-              <div className="mt-1 text-[15px] font-extrabold text-ink">{c.price?.amount_display ?? '—'}</div>
+              <div className="mt-1 text-[15px] font-extrabold text-ink">{c.price?.amount_display ?? '-'}</div>
             </div>
             <span className="flex h-8 w-8 items-center justify-center rounded-full border border-brand/40 text-brand transition group-hover:bg-brand group-hover:text-white">
               <IconChevronRight className="h-[18px] w-[18px]" />

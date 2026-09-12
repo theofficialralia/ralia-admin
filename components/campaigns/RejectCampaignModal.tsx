@@ -25,7 +25,7 @@ export function RejectCampaignModal({
 
   return (
     <Modal title={`Reject ${name}?`} onClose={onClose}>
-      <p className="text-[13.5px] text-muted">Choose how this campaign is rejected — a reason is required and shown to the business.</p>
+      <p className="text-[13.5px] text-muted">Choose how this campaign is rejected - a reason is required and shown to the business.</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <TypeCard
@@ -38,7 +38,7 @@ export function RejectCampaignModal({
           active={terminal}
           onClick={() => setTerminal(true)}
           title="Reject entirely"
-          desc="The campaign breaks policy — cancelled, not resubmittable."
+          desc="The campaign breaks policy - cancelled, not resubmittable."
           danger
         />
       </div>
@@ -49,7 +49,7 @@ export function RejectCampaignModal({
             className="input min-h-24"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder={terminal ? 'e.g. The creative violates our content policy.' : 'e.g. The destination link is broken — fix it and resubmit.'}
+            placeholder={terminal ? 'e.g. The creative violates our content policy.' : 'e.g. The destination link is broken - fix it and resubmit.'}
           />
         </Field>
       </div>
