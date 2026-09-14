@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { IconCheck, IconClose, IconDownload, IconExternal, IconMail, IconPhone, IconPin } from '@/components/brand/icons';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -180,15 +181,15 @@ function PromoterDetail({
           <div>
             <div className="text-[19px] font-extrabold text-ink">{promoter.full_name ?? 'Unnamed'}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
-              <span>📱 {promoter.phone_e164}</span>
-              <span>📍 {promoter.location_state ?? '-'}</span>
-              <span>✉ {promoter.email}</span>
+              <span className="inline-flex items-center gap-1"><IconPhone className="h-3.5 w-3.5" /> {promoter.phone_e164}</span>
+              <span className="inline-flex items-center gap-1"><IconPin className="h-3.5 w-3.5" /> {promoter.location_state ?? '-'}</span>
+              <span className="inline-flex items-center gap-1"><IconMail className="h-3.5 w-3.5" /> {promoter.email}</span>
             </div>
           </div>
         </div>
         {canReview && (
           <div className="flex gap-2">
-            <Button variant="danger" onClick={onReject}>✕ Reject promoter</Button>
+            <Button variant="danger" onClick={onReject}><IconClose className="h-4 w-4" /> Reject promoter</Button>
             <Button onClick={onApprove} loading={approving}>Accept</Button>
           </div>
         )}
@@ -309,10 +310,10 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
           <span className="text-[12px] font-semibold text-muted">Channel:</span>
           {channel.status !== 'ACTIVE' && (
-            <Button size="sm" loading={busy === 'approve'} onClick={approveChannel}>✓ Approve</Button>
+            <Button size="sm" loading={busy === 'approve'} onClick={approveChannel}><IconCheck className="h-4 w-4" /> Approve</Button>
           )}
           {channel.status !== 'REJECTED' && (
-            <Button size="sm" variant="danger" loading={busy === 'reject'} onClick={rejectChannel}>✕ Reject</Button>
+            <Button size="sm" variant="danger" loading={busy === 'reject'} onClick={rejectChannel}><IconClose className="h-4 w-4" /> Reject</Button>
           )}
           {channel.status === 'ACTIVE' && <span className="text-[12px] font-semibold text-ok">Approved - matched on</span>}
           {channel.status === 'REJECTED' && <span className="text-[12px] font-semibold text-muted">Rejected - not matched</span>}
@@ -323,7 +324,7 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {channel.url ? (
           <a href={channel.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
-            Open profile / link ↗
+            Open profile / link <IconExternal className="h-3.5 w-3.5" />
           </a>
         ) : channel.handle ? (
           <span className="rounded-full border border-rule px-3 py-1.5 text-[12.5px] text-muted">{channel.handle}</span>
@@ -332,7 +333,7 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
         )}
         {channel.screenshot_url ? (
           <a href={channel.screenshot_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
-            View screenshot ↗
+            View screenshot <IconExternal className="h-3.5 w-3.5" />
           </a>
         ) : (
           <span className="rounded-full border border-dashed border-rule px-3 py-1.5 text-[12.5px] text-muted">No screenshot</span>
@@ -447,7 +448,7 @@ function PromoterDirectory({ canReview }: { canReview: boolean }) {
             ],
           }}
         /></div>
-        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Download the listed promoters as CSV for bulk messaging">↓ Export CSV</Button>
+        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Download the listed promoters as CSV for bulk messaging"><IconDownload className="h-4 w-4" /> Export CSV</Button>
       </div>
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
@@ -519,7 +520,11 @@ function PromoterModal({ userId, canReview, onClose }: { userId: string; canRevi
       ) : (
         <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="text-[12.5px] text-muted">📱 {p.phone_e164} · ✉ {p.email} · 📍 {p.location_state ?? '-'}</div>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-muted">
+              <span className="inline-flex items-center gap-1"><IconPhone className="h-3.5 w-3.5" /> {p.phone_e164}</span>
+              <span className="inline-flex items-center gap-1"><IconMail className="h-3.5 w-3.5" /> {p.email}</span>
+              <span className="inline-flex items-center gap-1"><IconPin className="h-3.5 w-3.5" /> {p.location_state ?? '-'}</span>
+            </div>
             <StatusPill status={p.status} />
           </div>
 

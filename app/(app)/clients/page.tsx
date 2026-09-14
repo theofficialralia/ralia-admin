@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { IconDownload } from '@/components/brand/icons';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
@@ -74,7 +75,7 @@ export default function ClientsPage() {
                 ['Business', 'Email', 'Phone', 'Industry', 'Status', 'Campaigns', 'Spent', 'Joined'],
                 filtered.map((c) => [c.name, c.email, c.phone ?? '', c.industry ?? '', c.status, c.campaigns_created, c.spent.amount_display, new Date(c.created_at).toISOString().slice(0, 10)]),
               )}
-            >↓ Export CSV</Button>
+            ><IconDownload className="h-4 w-4" /> Export CSV</Button>
           </div>
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
@@ -99,7 +100,7 @@ export default function ClientsPage() {
                             <Avatar name={c.name} className="h-9 w-9 text-[12px]" />
                             <div>
                               <div className="font-bold text-ink">{c.name}</div>
-                              <div className="text-[12px] text-muted">{c.email}{c.phone ? ` · 📱 ${c.phone}` : ''}{c.industry ? ` · ${c.industry}` : ''}</div>
+                              <div className="text-[12px] text-muted">{c.email}{c.phone ? ` · ${c.phone}` : ''}{c.industry ? ` · ${c.industry}` : ''}</div>
                             </div>
                           </div>
                         </td>

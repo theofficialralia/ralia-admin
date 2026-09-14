@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { ReasonModal } from '@/components/ui/ReasonModal';
-import { IconCopy, IconExternal } from '@/components/brand/icons';
+import { IconClose, IconCopy, IconExternal, IconWarning } from '@/components/brand/icons';
 import { api, ApiError, uuid, type PendingSubmission } from '@/lib/api';
 import { compactNumber, relativeTime } from '@/lib/format';
 
@@ -116,7 +116,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
         ) : (
           <span className="text-[12.5px] text-muted">No screenshot attached</span>
         )}
-        {s.auto_flag && <span className="absolute left-3 top-3 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white">⚠ Possible duplicate</span>}
+        {s.auto_flag && <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white"><IconWarning className="h-3.5 w-3.5" /> Possible duplicate</span>}
       </a>
 
       {/* Proof URL */}
@@ -137,7 +137,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
       {reviewable && (
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-rule p-4">
-          <Button variant="danger" className="w-full" onClick={() => setRejecting(true)}>✕ Reject</Button>
+          <Button variant="danger" className="w-full" onClick={() => setRejecting(true)}><IconClose className="h-4 w-4" /> Reject</Button>
           <Button className="w-full" onClick={() => approve.mutate()} loading={approve.isPending}>Approve &amp; Pay</Button>
         </div>
       )}

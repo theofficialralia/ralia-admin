@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
-import { IconCampaigns } from '@/components/brand/icons';
+import { IconCampaigns, IconClose, IconSparkle } from '@/components/brand/icons';
 import { AssetsGrid, creativeSummary, perPromoterDisplay, TargetingPills } from '@/components/campaigns/CampaignInfo';
 import { api, type CampaignDetail } from '@/lib/api';
 import { titleCase } from '@/lib/format';
@@ -58,7 +58,7 @@ export function CampaignReviewPane({
           {c.targeting ? <TargetingPills targeting={c.targeting} /> : <p className="text-[13px] text-muted">No targeting set.</p>}
         </div>
         <div className="rounded-2xl bg-wash p-4">
-          <div className="mb-2.5 text-[13px] font-bold text-ink">✧ Creative</div>
+          <div className="mb-2.5 inline-flex items-center gap-1.5 text-[13px] font-bold text-ink"><IconSparkle className="h-4 w-4" /> Creative</div>
           <p className="text-[13.5px] text-body">{creativeSummary(c.assets)}</p>
           {c.needs_creative && <p className="mt-1 text-[12px] text-muted">Client asked Ralia to design this.</p>}
         </div>
@@ -71,7 +71,7 @@ export function CampaignReviewPane({
 
       {canReview && (c.status === 'PENDING_APPROVAL' || c.status === 'CONFIRMING_PAYMENT') && (
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <Button size="lg" variant="danger" className="w-full" onClick={onReject}>✕ Reject campaign</Button>
+          <Button size="lg" variant="danger" className="w-full" onClick={onReject}><IconClose className="h-4 w-4" /> Reject campaign</Button>
           <Button size="lg" className="w-full" onClick={onAccept} loading={approving}>Accept</Button>
         </div>
       )}

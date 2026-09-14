@@ -1,6 +1,7 @@
 'use client';
 
 import type { CampaignAsset, CampaignDetail, CampaignTargeting } from '@/lib/api';
+import { IconExternal } from '@/components/brand/icons';
 import { compactNumber, titleCase } from '@/lib/format';
 
 /** ₦ per promoter, derived from the frozen price ÷ slots. */
@@ -68,7 +69,7 @@ export function AssetsGrid({ assets }: { assets: CampaignAsset[] }) {
             {a.caption_text ? (
               <span className="line-clamp-3 text-[11.5px] text-body">“{a.caption_text}”</span>
             ) : url ? (
-              <a href={url} target="_blank" rel="noreferrer" className="text-[11.5px] font-semibold text-brand-700 underline">View file ↗</a>
+              <a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-700 underline">View file <IconExternal className="h-3 w-3" /></a>
             ) : (
               <span className="text-[11px] text-muted">-</span>
             )}
@@ -107,8 +108,8 @@ export function CampaignDetailsView({ c }: { c: CampaignDetail }) {
         {c.destination_url && (
           <>
             <div className="mt-4 text-[12px] font-semibold text-muted">Destination</div>
-            <a href={c.destination_url} target="_blank" rel="noreferrer" className="break-all text-[13.5px] font-semibold text-brand-700 underline hover:opacity-80">
-              {c.destination_url} ↗
+            <a href={c.destination_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 break-all text-[13.5px] font-semibold text-brand-700 underline hover:opacity-80">
+              {c.destination_url} <IconExternal className="h-3.5 w-3.5 shrink-0" />
             </a>
           </>
         )}

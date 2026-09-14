@@ -8,6 +8,7 @@ import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { IconClose } from '@/components/brand/icons';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -96,7 +97,7 @@ function WithdrawalsTab() {
                       </div>
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <Button size="lg" variant="danger" className="w-full" onClick={() => setFailing(w)}>✕ Hold payment</Button>
+                        <Button size="lg" variant="danger" className="w-full" onClick={() => setFailing(w)}><IconClose className="h-4 w-4" /> Hold payment</Button>
                         {!kycOk && can('REVIEW_EVIDENCE') ? (
                           <Button size="lg" variant="secondary" className="w-full" onClick={() => verifyKyc.mutate(w.promoter_id)} loading={verifyKyc.isPending && verifyKyc.variables === w.promoter_id}>Verify KYC first</Button>
                         ) : (

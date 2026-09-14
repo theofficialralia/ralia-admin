@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { IconArrowLeft } from '@/components/brand/icons';
+import { IconArrowLeft, IconCheck, IconPhone } from '@/components/brand/icons';
 import { CampaignDetailsView } from '@/components/campaigns/CampaignInfo';
 import { RejectCampaignModal } from '@/components/campaigns/RejectCampaignModal';
 import { SubmissionCard } from '@/components/campaigns/SubmissionCard';
@@ -218,11 +218,11 @@ function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: str
             const accepted = o.status === 'ACCEPTED';
             return (
               <div key={o.promoter_id} className={`card flex items-center gap-3 p-4 ${accepted ? 'border-ok/40' : ''}`}>
-                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] ${accepted ? 'bg-ok-wash text-ok' : 'bg-wash text-muted'}`}>{accepted ? '✓' : '…'}</span>
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${accepted ? 'bg-ok-wash text-ok' : 'bg-wash text-muted'}`}>{accepted ? <IconCheck className="h-3.5 w-3.5" /> : <span className="text-[13px] leading-none">…</span>}</span>
                 <Avatar name={o.full_name} className="h-10 w-10 rounded-2xl text-[13px]" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{o.full_name ?? 'Unnamed'}</div>
-                  <div className="truncate text-[12px] text-muted">📱 {o.phone_e164} · {o.location_state ?? '-'} · {titleCase(o.platform)}</div>
+                  <div className="flex items-center gap-1 truncate text-[12px] text-muted"><IconPhone className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{o.phone_e164} · {o.location_state ?? '-'} · {titleCase(o.platform)}</span></div>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-[11px] text-muted">Reach</div>
@@ -284,7 +284,7 @@ function SendMorePicker({ campaignId, onOffered, canReview }: { campaignId: stri
             const checked = selected.has(c.promoter_id);
             return (
               <button key={c.promoter_id} onClick={() => canReview && toggle(c.promoter_id)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${checked ? 'border-brand bg-brand/5' : 'border-rule hover:bg-wash'}`}>
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-brand bg-brand text-white' : 'border-rule'}`}>{checked ? '✓' : ''}</span>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-brand bg-brand text-white' : 'border-rule'}`}>{checked && <IconCheck className="h-3 w-3" />}</span>
                 <Avatar name={c.full_name} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{c.full_name ?? 'Unnamed'}</div>

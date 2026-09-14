@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { IconCheck } from '@/components/brand/icons';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -227,7 +228,7 @@ function CapabilityPicker({ selected, onToggle }: { selected: Capability[]; onTo
             onClick={() => onToggle(c.value)}
             className={`flex w-full items-start gap-3 rounded-xl border p-3 text-left transition ${on ? 'border-brand bg-brand/5' : 'border-rule hover:border-ink/30'}`}
           >
-            <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] font-bold ${on ? 'bg-brand text-white' : 'border border-rule text-transparent'}`}>✓</span>
+            <span className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md ${on ? 'bg-brand text-white' : 'border border-rule text-transparent'}`}>{on && <IconCheck className="h-3 w-3" />}</span>
             <span>
               <span className="block text-[13.5px] font-semibold text-ink">{c.label}</span>
               <span className="block text-[12px] text-muted">{c.desc}</span>
