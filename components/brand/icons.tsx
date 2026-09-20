@@ -141,6 +141,14 @@ export function IconChevronRight({ className }: IconProps) {
   );
 }
 
+export function IconChevronLeft({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="m15 6-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function IconArrowLeft({ className }: IconProps) {
   return (
     <svg {...box(className)}>
