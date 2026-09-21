@@ -15,6 +15,15 @@ const TIER: Record<PromoterTier, { label: string; badge: string; dot: string }> 
   PLATINUM: { label: 'Platinum', badge: 'bg-indigo-400/20 text-indigo-500', dot: 'bg-indigo-500' },
 };
 
+function seasonSubtitle(data: AdminLeaderboard): string {
+  const base = `Promoter standings this season — ${data.total.toLocaleString()} ranked.`;
+  if (!data.season_ends_at) return `${base} Seasons don’t reset (set a season length in Settings to enable resets).`;
+  const ends = new Date(data.season_ends_at);
+  const days = Math.ceil((ends.getTime() - Date.now()) / 86_400_000);
+  const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
+  return `${base} Season ends ${when} (${ends.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}).`;
+}
+
 function TierBadge({ tier }: { tier: PromoterTier }) {
   const t = TIER[tier];
   return (
@@ -39,7 +48,7 @@ export default function AdminLeaderboardPage() {
 
   return (
     <div>
-      <PageHeader crumb={`Admin · Season ${data.season}`} title="Leaderboard" subtitle={`Promoter standings this season — ${data.total.toLocaleString()} ranked. Points build rank and tier; tiers gate campaigns.`} />
+      <PageHeader crumb={`Admin · Season ${data.season}`} title="Leaderboard" subtitle={seasonSubtitle(data)} />
 
       {data.total > 8 && (
         <div className="relative mb-4 max-w-sm">

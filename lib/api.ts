@@ -355,7 +355,7 @@ export type AdminLeaderboardRow = {
   tier: PromoterTier;
   streak: number;
 };
-export type AdminLeaderboard = { season: string; total: number; rows: AdminLeaderboardRow[] };
+export type AdminLeaderboard = { season: string; season_ends_at: string | null; total: number; rows: AdminLeaderboardRow[] };
 
 export type LeaderboardConfig = {
   pts_delivery_completed: number;
