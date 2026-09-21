@@ -345,6 +345,18 @@ export type AdminClient = {
   created_at: string;
 };
 
+export type PromoterTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+export type AdminLeaderboardRow = {
+  rank: number;
+  promoter_id: string;
+  full_name: string | null;
+  season_points: number;
+  lifetime_points: number;
+  tier: PromoterTier;
+  streak: number;
+};
+export type AdminLeaderboard = { season: string; total: number; rows: AdminLeaderboardRow[] };
+
 export type LeaderboardConfig = {
   pts_delivery_completed: number;
   pts_on_time: number;

@@ -70,6 +70,18 @@ export function IconPerformance({ className }: IconProps) {
   );
 }
 
+export function IconTrophy({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5.5H4.8a2 2 0 0 0 0 4H7.4" />
+      <path d="M17 5.5h2.2a2 2 0 0 1 0 4H16.6" />
+      <path d="M12 13v3" />
+      <path d="M9.5 20h5l-.6-4h-3.8L9.5 20Z" />
+    </svg>
+  );
+}
+
 export function IconSettings({ className }: IconProps) {
   return (
     <svg {...box(className)}>
