@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics, type PromoterFull } from '@/lib/api';
+import { api, ApiError, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics, type PromoterFull } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { downloadCsv } from '@/lib/csv';
 import { compactNumber, relativeTime, titleCase } from '@/lib/format';
@@ -172,6 +172,9 @@ function PromoterDetail({
   onChanged: () => void;
 }) {
   const [tab, setTab] = useState<'channels' | 'details'>('channels');
+  const { can } = useAuth();
+  const canAdjust = can('RECORD_MONEY');
+  const [adjusting, setAdjusting] = useState(false);
 
   return (
     <div className="card p-5 sm:p-6">
@@ -187,13 +190,16 @@ function PromoterDetail({
             </div>
           </div>
         </div>
-        {canReview && (
+        {(canReview || canAdjust) && (
           <div className="flex gap-2">
-            <Button variant="danger" onClick={onReject}><IconClose className="h-4 w-4" /> Reject promoter</Button>
-            <Button onClick={onApprove} loading={approving}>Accept</Button>
+            {canAdjust && <Button variant="secondary" onClick={() => setAdjusting(true)}>Adjust points</Button>}
+            {canReview && <Button variant="danger" onClick={onReject}><IconClose className="h-4 w-4" /> Reject promoter</Button>}
+            {canReview && <Button onClick={onApprove} loading={approving}>Accept</Button>}
           </div>
         )}
       </div>
+
+      {adjusting && <AdjustPointsModal promoterId={promoter.user_id} name={promoter.full_name} onClose={() => setAdjusting(false)} />}
 
       {/* Tabs */}
       <div className="mt-5 inline-flex w-full rounded-2xl bg-wash p-1 text-[14px] font-semibold sm:w-auto">
@@ -371,6 +377,40 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
         </div>
       )}
     </div>
+  );
+}
+
+function AdjustPointsModal({ promoterId, name, onClose }: { promoterId: string; name: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [points, setPoints] = useState('');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useMutation({
+    mutationFn: () => api.post(`/v1/admin/promoters/${promoterId}/points`, { points: Number(points), reason: reason.trim() }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['audit-log'] }); onClose(); },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not adjust points.'),
+  });
+
+  const valid = Number.isInteger(Number(points)) && Number(points) !== 0 && reason.trim().length >= 5;
+
+  return (
+    <Modal title={`Adjust points — ${name ?? 'promoter'}`} onClose={onClose}>
+      <p className="text-[13px] text-muted">Award (positive) or dock (negative) leaderboard points. Recorded on the audit log with your reason.</p>
+      <div className="mt-4 grid gap-4">
+        <Field label="Points" hint="e.g. 100 to award, -50 to dock.">
+          <input type="number" className="input" value={points} onChange={(e) => { setError(null); setPoints(e.target.value); }} placeholder="0" />
+        </Field>
+        <Field label="Reason">
+          <input className="input" value={reason} onChange={(e) => { setError(null); setReason(e.target.value); }} placeholder="Why you’re adjusting this" />
+        </Field>
+        {error && <p className="text-[12.5px] text-brand-700">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button disabled={!valid} loading={submit.isPending} onClick={() => submit.mutate()}>Apply</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

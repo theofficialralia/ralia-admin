@@ -345,6 +345,29 @@ export type AdminClient = {
   created_at: string;
 };
 
+export type LeaderboardConfig = {
+  pts_delivery_completed: number;
+  pts_on_time: number;
+  pts_quality_clean: number;
+  over_base: number;
+  over_cap_ratio: number;
+  streak_step: number;
+  streak_cap: number;
+  pts_breadth: number;
+  pts_milestone: number;
+  penalty_no_show: number;
+  penalty_rejected: number;
+  penalty_duplicate: number;
+  per_campaign_point_cap: number;
+  mult_creation_hundredths: number;
+  mult_distribution_hundredths: number;
+  season_length_days: number;
+  tier_silver_at: number;
+  tier_gold_at: number;
+  tier_platinum_at: number;
+  tier_reliability_floor: number;
+};
+
 export type PlatformRules = {
   rpm_minor: number;
   rpm_distribution_minor: number;

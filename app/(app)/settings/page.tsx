@@ -10,16 +10,17 @@ import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, ApiError, type AuditEntry, type Capability, type PendingInvite, type PlatformRules, type Team, type TeamMember } from '@/lib/api';
+import { api, ApiError, type AuditEntry, type Capability, type LeaderboardConfig, type PendingInvite, type PlatformRules, type Team, type TeamMember } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { nameFromEmail, relativeTime, roleFromCapabilities, titleCase } from '@/lib/format';
 
-type Tab = 'account' | 'team' | 'notifications' | 'rules' | 'audit' | 'security';
+type Tab = 'account' | 'team' | 'notifications' | 'rules' | 'leaderboard' | 'audit' | 'security';
 const TABS: [Tab, string][] = [
   ['account', 'My account'],
   ['team', 'Team & Roles'],
   ['notifications', 'Notifications'],
   ['rules', 'Platform rules'],
+  ['leaderboard', 'Leaderboard'],
   ['audit', 'Audit log'],
   ['security', 'Security'],
 ];
@@ -47,6 +48,7 @@ export default function SettingsPage() {
       {tab === 'team' && <TeamTab />}
       {tab === 'notifications' && <NotificationsTab />}
       {tab === 'rules' && <RulesTab />}
+      {tab === 'leaderboard' && <LeaderboardRulesTab />}
       {tab === 'audit' && <AuditTab />}
       {tab === 'security' && <SecurityTab />}
     </div>
@@ -407,6 +409,72 @@ function RulesTab() {
           <Field key={f.key} label={f.label} hint={f.hint}>
             <input
               type="number"
+              className="input"
+              disabled={!canEdit}
+              value={draft[f.key]}
+              onChange={(e) => { setSaved(false); setDraft({ ...draft, [f.key]: Math.max(0, Number(e.target.value)) }); }}
+            />
+          </Field>
+        ))}
+      </div>
+      {canEdit ? (
+        <div className="mt-6 flex items-center gap-3">
+          <Button onClick={() => save.mutate(draft)} loading={save.isPending}>Save changes</Button>
+          {saved && <span className="text-[13px] text-ok">Saved.</span>}
+        </div>
+      ) : (
+        <p className="mt-6 text-[13px] text-muted">You need the record-money capability to change these.</p>
+      )}
+    </div>
+  );
+}
+
+const LEADERBOARD_FIELDS: { key: keyof LeaderboardConfig; label: string; hint: string; step?: number }[] = [
+  { key: 'pts_delivery_completed', label: 'Completed delivery', hint: 'Base points for an approved submission.' },
+  { key: 'pts_on_time', label: 'On-time bonus', hint: 'Extra points when delivered by the deadline.' },
+  { key: 'pts_quality_clean', label: 'Clean proof bonus', hint: 'Extra points when the proof isn’t flagged as a duplicate.' },
+  { key: 'over_base', label: 'Over-delivery base', hint: 'Points at 2× the promised reach; scales up to the cap ratio.' },
+  { key: 'over_cap_ratio', label: 'Over-delivery cap (×)', hint: 'The ratio to promise at which over-delivery points stop growing.' },
+  { key: 'per_campaign_point_cap', label: 'Per-campaign cap', hint: 'Most positive points one promoter can earn on a single campaign.' },
+  { key: 'mult_distribution_hundredths', label: 'Distribution multiplier (×100)', hint: 'Difficulty multiplier on effort points, in hundredths (100 = ×1.0).' },
+  { key: 'mult_creation_hundredths', label: 'Creation multiplier (×100)', hint: 'Difficulty multiplier for creation work (150 = ×1.5).' },
+  { key: 'penalty_no_show', label: 'No-show penalty', hint: 'Points docked for a missed deadline.' },
+  { key: 'penalty_rejected', label: 'Rejection penalty', hint: 'Points docked when a submission is rejected.' },
+  { key: 'penalty_duplicate', label: 'Duplicate penalty', hint: 'Points docked for a confirmed duplicate.' },
+  { key: 'season_length_days', label: 'Season length (days)', hint: '0 = never resets. Otherwise the season rolls over on this cadence.' },
+  { key: 'tier_silver_at', label: 'Silver at (rolling-90 pts)', hint: 'Rolling-90 points needed to reach Silver.' },
+  { key: 'tier_gold_at', label: 'Gold at (rolling-90 pts)', hint: 'Rolling-90 points needed to reach Gold (with the reliability floor).' },
+  { key: 'tier_platinum_at', label: 'Platinum at (rolling-90 pts)', hint: 'Rolling-90 points needed to reach Platinum (with the reliability floor).' },
+  { key: 'tier_reliability_floor', label: 'Tier reliability floor', hint: 'Reliability (0–1) required to sit in Gold/Platinum.', step: 0.05 },
+];
+
+function LeaderboardRulesTab() {
+  const qc = useQueryClient();
+  const { can } = useAuth();
+  const canEdit = can('RECORD_MONEY');
+  const q = useQuery({ queryKey: ['leaderboard-config'], queryFn: () => api.get<LeaderboardConfig>('/v1/admin/leaderboard-config') });
+  const [draft, setDraft] = useState<LeaderboardConfig | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => { if (q.data) setDraft(q.data); }, [q.data]);
+
+  const save = useMutation({
+    mutationFn: (body: LeaderboardConfig) => api.patch<LeaderboardConfig>('/v1/admin/leaderboard-config', body),
+    onSuccess: (fresh) => { setDraft(fresh); setSaved(true); void qc.invalidateQueries({ queryKey: ['leaderboard-config'] }); },
+  });
+
+  if (q.isLoading || !draft) return <div className="flex h-40 items-center justify-center text-brand"><Spinner className="h-7 w-7" /></div>;
+
+  return (
+    <div className="card max-w-3xl p-6">
+      <h2 className="text-[16px] font-extrabold text-ink">Leaderboard rules</h2>
+      <p className="mb-4 text-[13px] text-muted">Point values, multipliers, caps, the season length and the tier thresholds. Changes apply to points earned from now on; the nightly rebuild re-derives tiers.</p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {LEADERBOARD_FIELDS.map((f) => (
+          <Field key={f.key} label={f.label} hint={f.hint}>
+            <input
+              type="number"
+              step={f.step ?? 1}
               className="input"
               disabled={!canEdit}
               value={draft[f.key]}
