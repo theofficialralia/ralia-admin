@@ -428,9 +428,11 @@ export type PlatformAnalytics = {
   campaigns_by_status: StatusCount[];
   spend_by_category: CategorySpend[];
   promoter_performance: RolePerformance[];
+  weekly_revenue: DayRevenue[];
 };
 
 export type CategorySpend = { category: string; spend: Money };
 export type RolePerformance = { role: string; earnings: Money; campaigns: number };
+export type DayRevenue = { day: string; date: string; revenue: Money; profit: Money };
 
 export type AdminDecision = { id: string; status: string; message: string };

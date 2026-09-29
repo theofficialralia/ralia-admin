@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, type CategorySpend, type PlatformAnalytics, type RolePerformance, type StatusCount } from '@/lib/api';
+import { api, type CategorySpend, type DayRevenue, type PlatformAnalytics, type RolePerformance, type StatusCount } from '@/lib/api';
 import { compactNumber, titleCase } from '@/lib/format';
 
 export default function AnalyticsPage() {
@@ -25,7 +25,10 @@ export default function AnalyticsPage() {
         <StatCard label="Active clients" value={compactNumber(a.active_clients)} accent="ink" />
       </div>
 
-      <SpendByCategory rows={a.spend_by_category} />
+      <div className="grid gap-5 lg:grid-cols-2">
+        <WeeklyRevenue rows={a.weekly_revenue} />
+        <SpendByCategory rows={a.spend_by_category} />
+      </div>
 
       <div className="mt-5">
         <PromoterPerformance rows={a.promoter_performance} />
@@ -36,6 +39,61 @@ export default function AnalyticsPage() {
         <StatusCard title="Campaigns by status" subtitle="Across the whole marketplace" rows={a.campaigns_by_status} />
       </div>
     </div>
+  );
+}
+
+/** Compact naira from a minor-unit amount, e.g. 630000000 → ₦6.3M. */
+function nairaCompact(minor: number): string {
+  const n = minor / 100;
+  if (n >= 1_000_000) return `₦${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (n >= 1_000) return `₦${Math.round(n / 1_000)}k`;
+  return `₦${Math.round(n)}`;
+}
+
+/** Grouped daily bars: Revenue (funded) vs Profit (commission), last 7 days. */
+function WeeklyRevenue({ rows }: { rows: DayRevenue[] }) {
+  const H = 200;
+  const max = Math.max(1, ...rows.flatMap((r) => [r.revenue.amount_minor, r.profit.amount_minor]));
+  const ticks = [max, (max * 2) / 3, max / 3, 0];
+  const barPct = (minor: number) => (minor <= 0 ? 0 : Math.max(2, (minor / max) * 100));
+
+  return (
+    <section className="card p-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-[16px] font-extrabold text-ink">Weekly Revenue vs commissions</h2>
+          <p className="text-[12.5px] text-muted">Funded revenue vs profit — last 7 days</p>
+        </div>
+        <div className="flex items-center gap-4 text-[12px] font-semibold text-body">
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-brand" /> Revenue</span>
+          <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-ink" /> Profit</span>
+        </div>
+      </div>
+
+      <div className="mt-5 flex gap-3">
+        {/* Y axis */}
+        <div className="flex flex-col justify-between py-0.5 text-right text-[10.5px] tabular-nums text-muted" style={{ height: H }}>
+          {ticks.map((t, i) => <div key={i}>{nairaCompact(t)}</div>)}
+        </div>
+        {/* Plot */}
+        <div className="relative min-w-0 flex-1">
+          <div className="absolute inset-0 flex flex-col justify-between">
+            {ticks.map((_, i) => <div key={i} className="border-t border-rule/60" />)}
+          </div>
+          <div className="relative flex items-end justify-between gap-2" style={{ height: H }}>
+            {rows.map((d) => (
+              <div key={d.date} className="flex h-full flex-1 items-end justify-center gap-1">
+                <div className="w-3 rounded-t bg-brand" style={{ height: `${barPct(d.revenue.amount_minor)}%` }} title={`Revenue ${d.revenue.amount_display}`} />
+                <div className="w-3 rounded-t bg-ink" style={{ height: `${barPct(d.profit.amount_minor)}%` }} title={`Profit ${d.profit.amount_display}`} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex justify-between text-[11px] font-medium text-muted">
+            {rows.map((d) => <div key={d.date} className="flex-1 text-center">{d.day}</div>)}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
