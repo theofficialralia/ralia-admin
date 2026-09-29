@@ -70,6 +70,18 @@ export function IconPerformance({ className }: IconProps) {
   );
 }
 
+export function IconTrophy({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M7 5.5H4.8a2 2 0 0 0 0 4H7.4" />
+      <path d="M17 5.5h2.2a2 2 0 0 1 0 4H16.6" />
+      <path d="M12 13v3" />
+      <path d="M9.5 20h5l-.6-4h-3.8L9.5 20Z" />
+    </svg>
+  );
+}
+
 export function IconSettings({ className }: IconProps) {
   return (
     <svg {...box(className)}>
@@ -141,6 +153,14 @@ export function IconChevronRight({ className }: IconProps) {
   );
 }
 
+export function IconChevronLeft({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="m15 6-6 6 6 6" />
+    </svg>
+  );
+}
+
 export function IconArrowLeft({ className }: IconProps) {
   return (
     <svg {...box(className)}>
@@ -165,6 +185,97 @@ export function IconExternal({ className }: IconProps) {
       <path d="M14 5h5v5" />
       <path d="M19 5l-7 7" />
       <path d="M18 13.5V18a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 5 18V8a1.5 1.5 0 0 1 1.5-1.5H11" />
+    </svg>
+  );
+}
+
+export function IconCheck({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="m5 13 4 4 10-11" />
+    </svg>
+  );
+}
+
+export function IconClose({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+export function IconDownload({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M12 4v11" />
+      <path d="m8 11 4 4 4-4" />
+      <path d="M5 19h14" />
+    </svg>
+  );
+}
+
+export function IconWarning({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M12 4.5 21 19.5H3L12 4.5Z" />
+      <path d="M12 10v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+export function IconSparkle({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M12 4l1.7 4.8L18.5 10l-4.8 1.7L12 16.5l-1.7-4.8L5.5 10l4.8-1.5L12 4Z" />
+      <path d="M18.5 15.5l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6.6-1.5Z" />
+    </svg>
+  );
+}
+
+export function IconPhone({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M6.5 4h3l1.4 3.6-1.8 1.3a11 11 0 0 0 4.9 4.9l1.3-1.8L19 13.5v3a1.5 1.5 0 0 1-1.6 1.5A14.5 14.5 0 0 1 5 6.6 1.5 1.5 0 0 1 6.5 4Z" />
+    </svg>
+  );
+}
+
+export function IconPin({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M12 21s6-5.3 6-10a6 6 0 1 0-12 0c0 4.7 6 10 6 10Z" />
+      <circle cx="12" cy="11" r="2.2" />
+    </svg>
+  );
+}
+
+export function IconMail({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </svg>
+  );
+}
+
+export function IconEye({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+export function IconEyeOff({ className }: IconProps) {
+  return (
+    <svg {...box(className)}>
+      <path d="M4 4l16 16" />
+      <path d="M9.9 5.2A9.6 9.6 0 0 1 12 5c6 0 9.5 6.5 9.5 6.5a16.4 16.4 0 0 1-3 3.6" />
+      <path d="M6.5 7.6A16.3 16.3 0 0 0 2.5 12S6 18.5 12 18.5a9.3 9.3 0 0 0 3.3-.6" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
     </svg>
   );
 }

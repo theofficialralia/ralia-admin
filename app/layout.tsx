@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Urbanist } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/lib/providers';
+import { EnvBadge } from '@/components/EnvBadge';
 
 const urbanist = Urbanist({
   subsets: ['latin'],
@@ -11,7 +12,7 @@ const urbanist = Urbanist({
 });
 
 export const metadata: Metadata = {
-  title: 'Ralia — Admin',
+  title: 'Ralia - Admin',
   description: 'Approvals, matching, evidence review, payouts and reconciliation for the Ralia marketplace.',
 };
 
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>{children}</Providers>
+        <EnvBadge />
       </body>
     </html>
   );

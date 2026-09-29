@@ -8,6 +8,7 @@ import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { ReasonModal } from '@/components/ui/ReasonModal';
 import { Spinner } from '@/components/ui/Spinner';
+import { IconClose } from '@/components/brand/icons';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -96,7 +97,7 @@ function WithdrawalsTab() {
                       </div>
                     ) : (
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <Button size="lg" variant="danger" className="w-full" onClick={() => setFailing(w)}>✕ Hold payment</Button>
+                        <Button size="lg" variant="danger" className="w-full" onClick={() => setFailing(w)}><IconClose className="h-4 w-4" /> Hold payment</Button>
                         {!kycOk && can('REVIEW_EVIDENCE') ? (
                           <Button size="lg" variant="secondary" className="w-full" onClick={() => verifyKyc.mutate(w.promoter_id)} loading={verifyKyc.isPending && verifyKyc.variables === w.promoter_id}>Verify KYC first</Button>
                         ) : (
@@ -128,7 +129,7 @@ function FailModal({ withdrawal, onClose, onDone }: { withdrawal: PendingWithdra
   }
   return (
     <Modal title="Hold this withdrawal" onClose={onClose}>
-      <p className="text-[13.5px] text-muted">The promoter’s balance is untouched — nothing was posted. They can request it again.</p>
+      <p className="text-[13.5px] text-muted">The promoter’s balance is untouched - nothing was posted. They can request it again.</p>
       <Field label="Reason (shown to the promoter)">
         <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Bank details don’t match the account name" />
       </Field>

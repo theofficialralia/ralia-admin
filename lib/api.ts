@@ -85,7 +85,7 @@ export function uuid(): string {
 // ─────────────────────────────────────────────────────────────
 
 export type Tokens = { access_token: string; refresh_token: string; expires_in: number; token_type: string };
-export type Capability = 'REVIEW_EVIDENCE' | 'RECORD_MONEY';
+export type Capability = 'REVIEW_EVIDENCE' | 'RECORD_MONEY' | 'MANAGE_TEAM';
 export type Me = {
   id: string;
   email: string;
@@ -110,6 +110,7 @@ export type AdminChannel = {
   group_members: number | null;
   active_participants: number | null;
   status: string;
+  screenshot_url?: string | null;
 };
 
 export type PendingPromoter = {
@@ -122,6 +123,25 @@ export type PendingPromoter = {
   email: string;
   phone_e164: string;
   channels: AdminChannel[];
+};
+
+/** A single promoter opened from the directory (any status) - includes their status. */
+export type PromoterFull = PendingPromoter & { status: string };
+
+/** A row in the all-promoters directory (any status). */
+export type AdminPromoter = {
+  user_id: string;
+  full_name: string | null;
+  email: string;
+  phone_e164: string;
+  status: string;
+  location_state: string | null;
+  trust_score: number;
+  reliability: number;
+  channels_count: number;
+  top_platform: string | null;
+  total_reach: number;
+  created_at: string;
 };
 
 export type PendingCampaign = {
@@ -317,11 +337,47 @@ export type AdminClient = {
   org_id: string;
   name: string;
   email: string;
+  phone: string | null;
   industry: string | null;
   status: string;
   campaigns_created: number;
   spent: Money;
   created_at: string;
+};
+
+export type PromoterTier = 'BRONZE' | 'SILVER' | 'GOLD' | 'PLATINUM';
+export type AdminLeaderboardRow = {
+  rank: number;
+  promoter_id: string;
+  full_name: string | null;
+  season_points: number;
+  lifetime_points: number;
+  tier: PromoterTier;
+  streak: number;
+};
+export type AdminLeaderboard = { season: string; season_ends_at: string | null; total: number; rows: AdminLeaderboardRow[] };
+
+export type LeaderboardConfig = {
+  pts_delivery_completed: number;
+  pts_on_time: number;
+  pts_quality_clean: number;
+  over_base: number;
+  over_cap_ratio: number;
+  streak_step: number;
+  streak_cap: number;
+  pts_breadth: number;
+  pts_milestone: number;
+  penalty_no_show: number;
+  penalty_rejected: number;
+  penalty_duplicate: number;
+  per_campaign_point_cap: number;
+  mult_creation_hundredths: number;
+  mult_distribution_hundredths: number;
+  season_length_days: number;
+  tier_silver_at: number;
+  tier_gold_at: number;
+  tier_platinum_at: number;
+  tier_reliability_floor: number;
 };
 
 export type PlatformRules = {
@@ -356,6 +412,8 @@ export type AuditEntry = {
 };
 
 export type TeamMember = { id: string; email: string; status: string; capabilities: Capability[] };
+export type PendingInvite = { id: string; email: string; capabilities: Capability[]; expires_at: string; created_at: string };
+export type Team = { admins: TeamMember[]; pending_invites: PendingInvite[] };
 
 export type StatusCount = { status: string; count: number };
 
@@ -368,6 +426,13 @@ export type PlatformAnalytics = {
   active_clients: number;
   promoters_by_status: StatusCount[];
   campaigns_by_status: StatusCount[];
+  spend_by_category: CategorySpend[];
+  promoter_performance: RolePerformance[];
+  weekly_revenue: DayRevenue[];
 };
+
+export type CategorySpend = { category: string; spend: Money };
+export type RolePerformance = { role: string; earnings: Money; campaigns: number };
+export type DayRevenue = { day: string; date: string; revenue: Money; profit: Money };
 
 export type AdminDecision = { id: string; status: string; message: string };

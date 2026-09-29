@@ -11,7 +11,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
-import { IconArrowLeft } from '@/components/brand/icons';
+import { IconArrowLeft, IconCheck, IconPhone } from '@/components/brand/icons';
 import { CampaignDetailsView } from '@/components/campaigns/CampaignInfo';
 import { RejectCampaignModal } from '@/components/campaigns/RejectCampaignModal';
 import { SubmissionCard } from '@/components/campaigns/SubmissionCard';
@@ -83,7 +83,7 @@ export default function CampaignWorkspacePage() {
       {(c.status === 'PENDING_APPROVAL' || c.status === 'CONFIRMING_PAYMENT') && (
         <div className="card mt-5 flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="text-[13.5px] text-muted">
-            {c.status === 'PENDING_APPROVAL' ? 'Review the brief and creative, then approve or reject.' : 'Approved — record the client’s transfer to take it live.'}
+            {c.status === 'PENDING_APPROVAL' ? 'Review the brief and creative, then approve or reject.' : 'Approved - record the client’s transfer to take it live.'}
           </div>
           <div className="flex gap-2">
             {c.status === 'PENDING_APPROVAL' && canReview && (
@@ -124,7 +124,7 @@ export default function CampaignWorkspacePage() {
 
 function fmtRange(a: string | null, b: string | null): string | null {
   const fmt = (iso: string) => new Date(iso).toLocaleDateString('en-NG', { day: 'numeric', month: 'short' });
-  if (a && b) return `${fmt(a)} – ${fmt(b)}`;
+  if (a && b) return `${fmt(a)} - ${fmt(b)}`;
   if (a) return `from ${fmt(a)}`;
   return null;
 }
@@ -134,7 +134,7 @@ function Notice({ text }: { text: string }) {
 }
 
 function CampaignSubmissions({ campaignId, canReview, expectedReach, confirmedReach }: { campaignId: string; canReview: boolean; expectedReach: number; confirmedReach: number }) {
-  // Campaign-scoped, all verdicts — so approved/rejected proof stays in the history
+  // Campaign-scoped, all verdicts - so approved/rejected proof stays in the history
   // after it leaves the review queue.
   const q = useQuery({ queryKey: ['campaign-submissions', campaignId], queryFn: () => api.get<PendingSubmission[]>(`/v1/admin/campaigns/${campaignId}/submissions`) });
   const items = q.data ?? [];
@@ -156,7 +156,7 @@ function CampaignSubmissions({ campaignId, canReview, expectedReach, confirmedRe
         <>
           <div className="mb-3 text-[14px] font-semibold text-ink">Awaiting review{pending.length > 0 ? ` · ${pending.length}` : ''}</div>
           {pending.length === 0 ? (
-            <Notice text="Nothing waiting — every submission has been reviewed." />
+            <Notice text="Nothing waiting - every submission has been reviewed." />
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {pending.map((s) => <SubmissionCard key={s.id} submission={s} canReview={canReview} />)}
@@ -211,18 +211,18 @@ function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: str
       {showPicker && <SendMorePicker campaignId={campaignId} canReview={canReview} onOffered={() => { void roster.refetch(); onOffered(); }} />}
 
       {r.roster.length === 0 ? (
-        <Notice text="No offers out yet — none match the targeting, or allocation hasn't run." />
+        <Notice text="No offers out yet - none match the targeting, or allocation hasn't run." />
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {r.roster.map((o) => {
             const accepted = o.status === 'ACCEPTED';
             return (
               <div key={o.promoter_id} className={`card flex items-center gap-3 p-4 ${accepted ? 'border-ok/40' : ''}`}>
-                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[13px] ${accepted ? 'bg-ok-wash text-ok' : 'bg-wash text-muted'}`}>{accepted ? '✓' : '…'}</span>
+                <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${accepted ? 'bg-ok-wash text-ok' : 'bg-wash text-muted'}`}>{accepted ? <IconCheck className="h-3.5 w-3.5" /> : <span className="text-[13px] leading-none">…</span>}</span>
                 <Avatar name={o.full_name} className="h-10 w-10 rounded-2xl text-[13px]" />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{o.full_name ?? 'Unnamed'}</div>
-                  <div className="truncate text-[12px] text-muted">📱 {o.phone_e164} · {o.location_state ?? '—'} · {titleCase(o.platform)}</div>
+                  <div className="flex items-center gap-1 truncate text-[12px] text-muted"><IconPhone className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">{o.phone_e164} · {o.location_state ?? '-'} · {titleCase(o.platform)}</span></div>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-[11px] text-muted">Reach</div>
@@ -230,7 +230,7 @@ function OfferManagement({ campaignId, onOffered, canReview }: { campaignId: str
                 </div>
                 <div className="shrink-0 text-right">
                   <div className="text-[11px] text-muted">Fit</div>
-                  <div className={`text-[14px] font-extrabold ${o.fit_pct != null ? fitColor(o.fit_pct) : 'text-muted'}`}>{o.fit_pct != null ? `${o.fit_pct}%` : '—'}</div>
+                  <div className={`text-[14px] font-extrabold ${o.fit_pct != null ? fitColor(o.fit_pct) : 'text-muted'}`}>{o.fit_pct != null ? `${o.fit_pct}%` : '-'}</div>
                 </div>
                 <StatusPill status={o.status === 'SENT' ? 'Unanswered' : titleCase(o.status)} />
               </div>
@@ -284,11 +284,11 @@ function SendMorePicker({ campaignId, onOffered, canReview }: { campaignId: stri
             const checked = selected.has(c.promoter_id);
             return (
               <button key={c.promoter_id} onClick={() => canReview && toggle(c.promoter_id)} className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${checked ? 'border-brand bg-brand/5' : 'border-rule hover:bg-wash'}`}>
-                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-brand bg-brand text-white' : 'border-rule'}`}>{checked ? '✓' : ''}</span>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-brand bg-brand text-white' : 'border-rule'}`}>{checked && <IconCheck className="h-3 w-3" />}</span>
                 <Avatar name={c.full_name} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] font-bold text-ink">{c.full_name ?? 'Unnamed'}</div>
-                  <div className="truncate text-[12px] text-muted">{titleCase(c.channel.platform)} · {c.location_state ?? '—'} · trust {c.trust_score} · {c.capability_tier}</div>
+                  <div className="truncate text-[12px] text-muted">{titleCase(c.channel.platform)} · {c.location_state ?? '-'} · trust {c.trust_score} · {c.capability_tier}</div>
                 </div>
                 <div className="shrink-0 text-right">
                   <div className={`text-[15px] font-extrabold ${fitColor(c.fit_pct)}`}>{c.fit_pct}<span className="text-[10px] font-semibold text-muted"> % fit</span></div>

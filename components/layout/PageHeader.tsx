@@ -1,6 +1,6 @@
 /**
  * The standard page header: a red breadcrumb (`Queue · Users`), a large bold
- * H1, and a grey subtitle — matching the admin design across every screen.
+ * H1, and a grey subtitle - matching the admin design across every screen.
  */
 export function PageHeader({
   crumb,
