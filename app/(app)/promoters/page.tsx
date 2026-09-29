@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { IconCheck, IconClose, IconDownload, IconExternal, IconMail, IconPhone, IconPin } from '@/components/brand/icons';
 import { Field } from '@/components/ui/Field';
 import { Modal } from '@/components/ui/Modal';
 import { SearchInput } from '@/components/ui/SearchInput';
@@ -11,8 +12,9 @@ import { Spinner } from '@/components/ui/Spinner';
 import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
-import { api, type AdminChannel, type PendingPromoter, type PlatformAnalytics } from '@/lib/api';
+import { api, ApiError, type AdminChannel, type AdminPromoter, type PendingPromoter, type PlatformAnalytics, type PromoterFull } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { downloadCsv } from '@/lib/csv';
 import { compactNumber, relativeTime, titleCase } from '@/lib/format';
 
 /** Capability band, matching the backend §7 tiers. */
@@ -34,6 +36,7 @@ export default function PromotersPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [search, setSearch] = useState('');
+  const [view, setView] = useState<'queue' | 'directory'>('queue');
 
   const q = useQuery({
     queryKey: ['promoters'],
@@ -83,13 +86,24 @@ export default function PromotersPage() {
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Total promoters" value={total != null ? compactNumber(total) : '—'} accent="ink" />
-        <StatCard label="Approved" value={approved != null ? compactNumber(approved) : '—'} accent="ok" />
+        <StatCard label="Total promoters" value={total != null ? compactNumber(total) : '-'} accent="ink" />
+        <StatCard label="Approved" value={approved != null ? compactNumber(approved) : '-'} accent="ok" />
         <StatCard label="Pending" value={compactNumber(pending)} accent="warn" />
-        <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '—'} accent="brand" />
+        <StatCard label="Rejected" value={rejected != null ? compactNumber(rejected) : '-'} accent="brand" />
       </div>
 
-      {promoters.length === 0 ? (
+      <div className="mb-5 inline-flex rounded-full bg-wash p-1 text-[13.5px] font-semibold">
+        <button onClick={() => setView('queue')} className={`rounded-full px-5 py-1.5 transition ${view === 'queue' ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}>
+          Awaiting approval{promoters.length ? ` · ${compactNumber(promoters.length)}` : ''}
+        </button>
+        <button onClick={() => setView('directory')} className={`rounded-full px-5 py-1.5 transition ${view === 'directory' ? 'bg-ink text-paper' : 'text-muted hover:text-ink'}`}>
+          All promoters
+        </button>
+      </div>
+
+      {view === 'directory' && <PromoterDirectory canReview={can('REVIEW_EVIDENCE')} />}
+
+      {view === 'queue' && (promoters.length === 0 ? (
         <div className="card grid place-items-center p-16 text-center text-muted">
           <div className="text-[15px] font-semibold text-ink">Nothing waiting</div>
           <div className="mt-1 text-[13.5px]">The approval queue is empty.</div>
@@ -112,7 +126,7 @@ export default function PromotersPage() {
                     <Avatar name={p.full_name} className="h-11 w-11 text-[14px]" />
                     <div className="min-w-0">
                       <div className="truncate text-[14.5px] font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
-                      <div className="truncate text-[12px] text-muted">{p.phone_e164} · {p.location_state ?? '—'}</div>
+                      <div className="truncate text-[12px] text-muted">{p.phone_e164} · {p.location_state ?? '-'}</div>
                     </div>
                   </div>
                 </button>
@@ -133,7 +147,7 @@ export default function PromotersPage() {
             )}
           </div>
         </>
-      )}
+      ))}
 
       {rejecting && current && (
         <RejectModal name={current.full_name} pending={reject.isPending} error={reject.error} onClose={() => setRejecting(false)} onConfirm={(reason) => reject.mutate({ id: current.user_id, reason })} />
@@ -158,6 +172,9 @@ function PromoterDetail({
   onChanged: () => void;
 }) {
   const [tab, setTab] = useState<'channels' | 'details'>('channels');
+  const { can } = useAuth();
+  const canAdjust = can('RECORD_MONEY');
+  const [adjusting, setAdjusting] = useState(false);
 
   return (
     <div className="card p-5 sm:p-6">
@@ -167,19 +184,22 @@ function PromoterDetail({
           <div>
             <div className="text-[19px] font-extrabold text-ink">{promoter.full_name ?? 'Unnamed'}</div>
             <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[12.5px] text-muted">
-              <span>📱 {promoter.phone_e164}</span>
-              <span>📍 {promoter.location_state ?? '—'}</span>
-              <span>✉ {promoter.email}</span>
+              <span className="inline-flex items-center gap-1"><IconPhone className="h-3.5 w-3.5" /> {promoter.phone_e164}</span>
+              <span className="inline-flex items-center gap-1"><IconPin className="h-3.5 w-3.5" /> {promoter.location_state ?? '-'}</span>
+              <span className="inline-flex items-center gap-1"><IconMail className="h-3.5 w-3.5" /> {promoter.email}</span>
             </div>
           </div>
         </div>
-        {canReview && (
+        {(canReview || canAdjust) && (
           <div className="flex gap-2">
-            <Button variant="danger" onClick={onReject}>✕ Reject promoter</Button>
-            <Button onClick={onApprove} loading={approving}>Accept</Button>
+            {canAdjust && <Button variant="secondary" onClick={() => setAdjusting(true)}>Adjust points</Button>}
+            {canReview && <Button variant="danger" onClick={onReject}><IconClose className="h-4 w-4" /> Reject promoter</Button>}
+            {canReview && <Button onClick={onApprove} loading={approving}>Accept</Button>}
           </div>
         )}
       </div>
+
+      {adjusting && <AdjustPointsModal promoterId={promoter.user_id} name={promoter.full_name} onClose={() => setAdjusting(false)} />}
 
       {/* Tabs */}
       <div className="mt-5 inline-flex w-full rounded-2xl bg-wash p-1 text-[14px] font-semibold sm:w-auto">
@@ -213,7 +233,11 @@ function PromoterDetail({
           </div>
           <div>
             <div className="text-[13px] font-semibold text-ink">Capability</div>
-            <p className="mb-3 text-[12.5px] text-muted">Computed from what they told us and their verified reach. Approving confirms this.</p>
+            <p className="mb-3 text-[12.5px] text-muted">
+              Each role carries a <span className="font-semibold text-ink">0-100 score</span> - how well-suited this promoter is to that kind of
+              work, computed from what they told us and their verified reach. The label is the band it falls in
+              (Emerging &lt;40 · Developing 40-59 · Established 60-79 · Elite 80+). Approving confirms it.
+            </p>
             {promoter.roles.length === 0 ? (
               <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No roles selected yet.</div>
             ) : (
@@ -221,9 +245,9 @@ function PromoterDetail({
                 {promoter.roles.map((role) => {
                   const score = promoter.capability_preview[role] ?? 0;
                   return (
-                    <div key={role} className="rounded-xl border border-rule px-3.5 py-2">
+                    <div key={role} className="rounded-xl border border-rule px-3.5 py-2" title={`${titleCase(role)} capability: ${score}/100 (${capabilityTier(score)})`}>
                       <div className="text-[12px] font-semibold text-ink">{titleCase(role)}</div>
-                      <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted"> · {capabilityTier(score)}</span></div>
+                      <div className="text-[15px] font-extrabold text-ink">{score}<span className="text-[11px] font-semibold text-muted">/100 · {capabilityTier(score)}</span></div>
                     </div>
                   );
                 })}
@@ -256,6 +280,14 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
     setBusy('unverify');
     try { await api.post(`/v1/admin/channels/${channel.id}/unverify`, { reason: 'Proof not accepted' }); onChanged(); } finally { setBusy(null); }
   }
+  async function approveChannel() {
+    setBusy('approve');
+    try { await api.post(`/v1/admin/channels/${channel.id}/approve`, {}); onChanged(); } finally { setBusy(null); }
+  }
+  async function rejectChannel() {
+    setBusy('reject');
+    try { await api.post(`/v1/admin/channels/${channel.id}/reject`, { reason: 'Channel not approved' }); onChanged(); } finally { setBusy(null); }
+  }
 
   const basis = channel.is_group ? `${compactNumber(channel.active_participants ?? 0)} active` : `${compactNumber(channel.claimed_audience)} claimed`;
 
@@ -274,17 +306,70 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
           <div className="text-[15px] font-extrabold text-ink">{compactNumber(channel.claimed_audience)}</div>
         </div>
       </div>
-      <div className="mt-2 flex items-center gap-2">
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <StatusPill status={channel.status} />
         <StatusPill status={channel.verification_tier} />
         {channel.verified_at && <span className="text-[11.5px] text-muted">verified {relativeTime(channel.verified_at)}</span>}
       </div>
 
       {canReview && (
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-rule pt-3">
+          <span className="text-[12px] font-semibold text-muted">Channel:</span>
+          {channel.status !== 'ACTIVE' && (
+            <Button size="sm" loading={busy === 'approve'} onClick={approveChannel}><IconCheck className="h-4 w-4" /> Approve</Button>
+          )}
+          {channel.status !== 'REJECTED' && (
+            <Button size="sm" variant="danger" loading={busy === 'reject'} onClick={rejectChannel}><IconClose className="h-4 w-4" /> Reject</Button>
+          )}
+          {channel.status === 'ACTIVE' && <span className="text-[12px] font-semibold text-ok">Approved - matched on</span>}
+          {channel.status === 'REJECTED' && <span className="text-[12px] font-semibold text-muted">Rejected - not matched</span>}
+        </div>
+      )}
+
+      {/* Evidence the admin verifies against: the handle/link (insights) + screenshot. */}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {channel.url ? (
+          <a href={channel.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
+            Open profile / link <IconExternal className="h-3.5 w-3.5" />
+          </a>
+        ) : channel.handle ? (
+          <span className="rounded-full border border-rule px-3 py-1.5 text-[12.5px] text-muted">{channel.handle}</span>
+        ) : (
+          <span className="rounded-full border border-dashed border-rule px-3 py-1.5 text-[12.5px] text-muted">No handle/link provided</span>
+        )}
+        {channel.screenshot_url ? (
+          <a href={channel.screenshot_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-full border border-rule bg-paper px-3 py-1.5 text-[12.5px] font-semibold text-brand-700 transition hover:bg-wash">
+            View screenshot <IconExternal className="h-3.5 w-3.5" />
+          </a>
+        ) : (
+          <span className="rounded-full border border-dashed border-rule px-3 py-1.5 text-[12.5px] text-muted">No screenshot</span>
+        )}
+      </div>
+
+      {canReview && (
+        <div className="mt-3 flex flex-wrap gap-2 border-t border-rule pt-3">
           {channel.verification_tier === 'SELF' ? (
             <>
-              <Button size="sm" variant="secondary" loading={busy === 'SCREENSHOT'} onClick={() => verify('SCREENSHOT')}>Verify · screenshot</Button>
-              <Button size="sm" variant="secondary" loading={busy === 'INSIGHTS'} onClick={() => verify('INSIGHTS')}>Verify · insights</Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={busy === 'SCREENSHOT'}
+                disabled={!channel.screenshot_url}
+                title={channel.screenshot_url ? undefined : 'The promoter has not uploaded a screenshot for this channel'}
+                onClick={() => verify('SCREENSHOT')}
+              >
+                Verify · screenshot
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={busy === 'INSIGHTS'}
+                disabled={!channel.url && !channel.handle}
+                title={channel.url || channel.handle ? undefined : 'The promoter has not provided a handle or link for this channel'}
+                onClick={() => verify('INSIGHTS')}
+              >
+                Verify · insights
+              </Button>
             </>
           ) : (
             <Button size="sm" variant="ghost" loading={busy === 'unverify'} onClick={unverify}>Drop to self-reported</Button>
@@ -292,6 +377,40 @@ function ChannelRow({ channel, canReview, onChanged }: { channel: AdminChannel; 
         </div>
       )}
     </div>
+  );
+}
+
+function AdjustPointsModal({ promoterId, name, onClose }: { promoterId: string; name: string | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [points, setPoints] = useState('');
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = useMutation({
+    mutationFn: () => api.post(`/v1/admin/promoters/${promoterId}/points`, { points: Number(points), reason: reason.trim() }),
+    onSuccess: () => { void qc.invalidateQueries({ queryKey: ['audit-log'] }); onClose(); },
+    onError: (e) => setError(e instanceof ApiError ? e.message : 'Could not adjust points.'),
+  });
+
+  const valid = Number.isInteger(Number(points)) && Number(points) !== 0 && reason.trim().length >= 5;
+
+  return (
+    <Modal title={`Adjust points — ${name ?? 'promoter'}`} onClose={onClose}>
+      <p className="text-[13px] text-muted">Award (positive) or dock (negative) leaderboard points. Recorded on the audit log with your reason.</p>
+      <div className="mt-4 grid gap-4">
+        <Field label="Points" hint="e.g. 100 to award, -50 to dock.">
+          <input type="number" className="input" value={points} onChange={(e) => { setError(null); setPoints(e.target.value); }} placeholder="0" />
+        </Field>
+        <Field label="Reason">
+          <input className="input" value={reason} onChange={(e) => { setError(null); setReason(e.target.value); }} placeholder="Why you’re adjusting this" />
+        </Field>
+        {error && <p className="text-[12.5px] text-brand-700">{error}</p>}
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose}>Cancel</Button>
+          <Button disabled={!valid} loading={submit.isPending} onClick={() => submit.mutate()}>Apply</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -311,15 +430,161 @@ function RejectModal({
   const [reason, setReason] = useState('');
   return (
     <Modal title={`Reject ${name ?? 'promoter'}?`} onClose={onClose}>
-      <p className="text-[13.5px] text-muted">A reason is required — the promoter sees it and can fix their profile.</p>
+      <p className="text-[13.5px] text-muted">A reason is required - the promoter sees it and can fix their profile.</p>
       <Field>
         <textarea className="input mt-3 min-h-24" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. The WhatsApp screenshot does not show a follower count." />
       </Field>
-      {error != null && <p className="mt-2 text-[12px] text-brand-700">Could not reject — try again.</p>}
+      {error != null && <p className="mt-2 text-[12px] text-brand-700">Could not reject - try again.</p>}
       <div className="mt-5 flex justify-end gap-3">
         <Button variant="secondary" onClick={onClose} disabled={pending}>Cancel</Button>
         <Button variant="danger" onClick={() => onConfirm(reason)} loading={pending} disabled={reason.trim().length < 5}>Reject</Button>
       </div>
+    </Modal>
+  );
+}
+
+/** The full promoter directory - every promoter, any status, searchable + filterable. */
+function PromoterDirectory({ canReview }: { canReview: boolean }) {
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [openId, setOpenId] = useState<string | null>(null);
+  const q = useQuery({ queryKey: ['promoters-all'], queryFn: () => api.get<AdminPromoter[]>('/v1/admin/promoters') });
+  const rows = q.data ?? [];
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return rows.filter((p) => {
+      if (filter !== 'all' && p.status.toUpperCase() !== filter) return false;
+      if (!term) return true;
+      return (p.full_name ?? '').toLowerCase().includes(term) || p.email.toLowerCase().includes(term) || p.phone_e164.includes(term);
+    });
+  }, [rows, search, filter]);
+
+  if (q.isLoading) return <div className="flex h-40 items-center justify-center text-brand"><Spinner className="h-7 w-7" /></div>;
+
+  function exportCsv() {
+    downloadCsv(
+      `ralia-promoters-${new Date().toISOString().slice(0, 10)}`,
+      ['Name', 'Email', 'Phone', 'Location', 'Status', 'Channels', 'Top platform', 'Total reach', 'Trust', 'Joined'],
+      filtered.map((p) => [p.full_name ?? '', p.email, p.phone_e164, p.location_state ?? '', p.status, p.channels_count, p.top_platform ?? '', p.total_reach, Math.round(p.trust_score), new Date(p.created_at).toISOString().slice(0, 10)]),
+    );
+  }
+
+  return (
+    <>
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex-1"><SearchInput
+          value={search}
+          onChange={setSearch}
+          placeholder="Search all promoters"
+          filter={{
+            value: filter,
+            onChange: setFilter,
+            options: [
+              { value: 'all', label: 'All statuses' },
+              { value: 'ACTIVE', label: 'Active' },
+              { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
+              { value: 'SUSPENDED', label: 'Suspended' },
+              { value: 'REJECTED', label: 'Rejected' },
+            ],
+          }}
+        /></div>
+        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0} title="Download the listed promoters as CSV for bulk messaging"><IconDownload className="h-4 w-4" /> Export CSV</Button>
+      </div>
+      <div className="card overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] text-left text-[13.5px]">
+            <thead className="border-b border-rule text-[12px] font-semibold uppercase tracking-wide text-muted">
+              <tr>
+                <th className="px-5 py-3.5">Promoter</th>
+                <th className="px-5 py-3.5">Location</th>
+                <th className="px-5 py-3.5 text-right">Channels</th>
+                <th className="px-5 py-3.5 text-right">Reach</th>
+                <th className="px-5 py-3.5 text-right">Trust</th>
+                <th className="px-5 py-3.5">Status</th>
+                <th className="px-5 py-3.5">Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((p) => (
+                <tr key={p.user_id} onClick={() => setOpenId(p.user_id)} className="cursor-pointer border-b border-rule transition last:border-0 hover:bg-wash">
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar name={p.full_name} className="h-9 w-9 text-[12px]" />
+                      <div>
+                        <div className="font-bold text-ink">{p.full_name ?? 'Unnamed'}</div>
+                        <div className="text-[12px] text-muted">{p.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3.5 text-muted">{p.location_state ?? '-'}</td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">
+                    {p.channels_count}
+                    {p.top_platform ? <span className="ml-1 text-[11px] font-normal text-muted">{titleCase(p.top_platform)}</span> : ''}
+                  </td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">{compactNumber(p.total_reach)}</td>
+                  <td className="px-5 py-3.5 text-right font-semibold text-ink">{Math.round(p.trust_score)}</td>
+                  <td className="px-5 py-3.5"><StatusPill status={p.status} /></td>
+                  <td className="px-5 py-3.5 text-muted">{relativeTime(p.created_at)}</td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr><td colSpan={7} className="px-5 py-10 text-center text-muted">No promoters match.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {openId && <PromoterModal userId={openId} canReview={canReview} onClose={() => setOpenId(null)} />}
+    </>
+  );
+}
+
+/** Opens any promoter (from the directory) to review/approve their channels and
+ *  deactivate/reactivate them - not just the pending-approval queue. */
+function PromoterModal({ userId, canReview, onClose }: { userId: string; canReview: boolean; onClose: () => void }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['promoter', userId], queryFn: () => api.get<PromoterFull>(`/v1/admin/promoters/${userId}`) });
+  const p = q.data;
+  const refresh = () => { void qc.invalidateQueries({ queryKey: ['promoter', userId] }); void qc.invalidateQueries({ queryKey: ['promoters-all'] }); };
+
+  const setActive = useMutation({
+    mutationFn: (active: boolean) => api.post(`/v1/admin/promoters/${userId}/${active ? 'reactivate' : 'deactivate'}`),
+    onSuccess: refresh,
+  });
+
+  return (
+    <Modal title={p?.full_name ?? 'Promoter'} onClose={onClose}>
+      {!p ? (
+        <div className="grid h-32 place-items-center text-brand"><Spinner className="h-6 w-6" /></div>
+      ) : (
+        <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12.5px] text-muted">
+              <span className="inline-flex items-center gap-1"><IconPhone className="h-3.5 w-3.5" /> {p.phone_e164}</span>
+              <span className="inline-flex items-center gap-1"><IconMail className="h-3.5 w-3.5" /> {p.email}</span>
+              <span className="inline-flex items-center gap-1"><IconPin className="h-3.5 w-3.5" /> {p.location_state ?? '-'}</span>
+            </div>
+            <StatusPill status={p.status} />
+          </div>
+
+          {canReview && (p.status === 'ACTIVE' || p.status === 'SUSPENDED') && (
+            p.status === 'SUSPENDED' ? (
+              <Button size="sm" loading={setActive.isPending} onClick={() => setActive.mutate(true)}>Reactivate promoter</Button>
+            ) : (
+              <Button size="sm" variant="danger" loading={setActive.isPending} onClick={() => setActive.mutate(false)}>Deactivate promoter</Button>
+            )
+          )}
+
+          <div className="text-[13px] font-semibold text-ink">Channels · {p.channels.length}</div>
+          <div className="space-y-3">
+            {p.channels.length === 0 && <div className="rounded-xl border border-rule p-4 text-[13px] text-muted">No channels submitted.</div>}
+            {p.channels.map((c) => (
+              <ChannelRow key={c.id} channel={c} canReview={canReview} onChanged={refresh} />
+            ))}
+          </div>
+        </div>
+      )}
     </Modal>
   );
 }

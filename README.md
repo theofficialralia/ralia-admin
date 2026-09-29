@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🛡️ Ralia Admin
+# ð¡ï¸ Ralia Admin
 
-### The operations console — the human quality gate between promoters and clients.
+### The operations console â the human quality gate between promoters and clients.
 
 <br/>
 
@@ -22,11 +22,11 @@ Everything a client sees passes through here first. Admins approve campaigns, **
 run payouts, manage promoter capabilities, and reconcile the ledger. Money- and score-affecting
 actions are gated by capability (RBAC) and every one writes an audit row.
 
-## 🔎 What flows across the desk
+## ð What flows across the desk
 
 ```mermaid
 flowchart TB
-    subgraph Queues["📥 Review queues"]
+    subgraph Queues["ð¥ Review queues"]
       Q1[New campaigns]
       Q2[Proof submissions]
       Q3[Withdrawals]
@@ -34,8 +34,8 @@ flowchart TB
     end
 
     Q1 -->|approve / reject| Live[Campaign goes LIVE]
-    Q2 -->|verify views| Pay[💸 Pro-rata payout from escrow]
-    Q2 -->|reject + reason| Redo[↩️ Promoter resubmits]
+    Q2 -->|verify views| Pay[ð¸ Pro-rata payout from escrow]
+    Q2 -->|reject + reason| Redo[â©ï¸ Promoter resubmits]
     Q3 -->|record payout| Paid[Withdrawal paid]
     Q4 -->|confirm capability| Active[Promoter ACTIVE]
 
@@ -43,7 +43,7 @@ flowchart TB
     class Pay,Paid pay;
 ```
 
-## 🧾 Proof review
+## ð§¾ Proof review
 
 ```mermaid
 sequenceDiagram
@@ -54,28 +54,28 @@ sequenceDiagram
     participant C as Client
 
     P->>Q: Submit proof (Day X of N)
-    Adm->>Q: Open card · verify view count
+    Adm->>Q: Open card Â· verify view count
     alt meets threshold
-      Adm->>L: Approve → pay pro-rata (per slot)
+      Adm->>L: Approve â pay pro-rata (per slot)
       L->>C: Surface as "verified delivery"
     else below threshold
-      Adm->>P: Reject with reason → resubmit
+      Adm->>P: Reject with reason â resubmit
     end
 ```
 
-- **Campaign Submissions tab** is now full history — an *Awaiting review* lane and a *Reviewed*
+- **Campaign Submissions tab** is now full history â an *Awaiting review* lane and a *Reviewed*
   lane, so approved/rejected proof stays visible (with verdict, amount paid, and reason) instead of
   vanishing from the queue.
 - Proof screenshots render straight from the API's file route (`/v1/files/:id`).
 
-## 🔐 Capabilities (RBAC)
+## ð Capabilities (RBAC)
 
 | Capability | Guards |
 |---|---|
 | `REVIEW_EVIDENCE` | approving campaigns, reviewing proof, verifying channels |
 | `RECORD_MONEY` | funding campaigns, paying withdrawals, editing platform rules |
 
-## 🚀 Quickstart
+## ð Quickstart
 
 ```bash
 npm install
@@ -83,10 +83,10 @@ cp .env.example .env     # set API_ORIGIN (defaults to http://localhost:6100)
 npm run dev              # http://localhost:6200
 ```
 
-Seeded login: `admin@ralia.test` · password `Password123!`
+Seeded login: `admin@ralia.test` Â· password `Password123!`
 
 <details>
-<summary><b>🔐 Environment</b></summary>
+<summary><b>ð Environment</b></summary>
 
 | Variable | Purpose |
 |---|---|
@@ -95,22 +95,22 @@ Seeded login: `admin@ralia.test` · password `Password123!`
 </details>
 
 <details>
-<summary><b>🛠️ Scripts</b></summary>
+<summary><b>ð ï¸ Scripts</b></summary>
 
 | Script | Does |
 |---|---|
 | `dev` | dev server on :6200 |
 | `build` | production build |
-| `start:prod` | `node server.js` (Hostinger hPanel) |
+| `start:prod` | `node server.js` (only for a self-hosted Node host; Vercel builds natively) |
 | `typecheck` | `tsc --noEmit` |
 </details>
 
-## 🚢 Deployment
+## ð¢ Deployment
 
-Deploys to **Hostinger hPanel** (Node.js app) via the bundled `server.js`. See `DEPLOY.md`.
+Deploys to **Vercel** (native Next.js) — import the repo, set `API_ORIGIN` + `NEXT_PUBLIC_APP_ENV`, and Vercel builds each push. See `DEPLOY.md`.
 
 ---
 
 <div align="center">
-<sub>Part of Ralia · <a href="../ralia-api">API</a> · <a href="../ralia-client">Client</a> · <a href="../ralia-promoter">Promoter</a></sub>
+<sub>Part of Ralia Â· <a href="../ralia-api">API</a> Â· <a href="../ralia-client">Client</a> Â· <a href="../ralia-promoter">Promoter</a></sub>
 </div>

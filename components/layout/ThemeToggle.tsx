@@ -4,7 +4,7 @@ import { IconMoon, IconSun } from '@/components/brand/icons';
 import { useTheme } from '@/lib/theme';
 
 /**
- * Segmented light/dark switch: two pills, the active side filled brand-red —
+ * Segmented light/dark switch: two pills, the active side filled brand-red -
  * matching the design's header control (a lone icon read as unfinished).
  */
 export function ThemeToggle() {

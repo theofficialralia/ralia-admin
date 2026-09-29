@@ -13,6 +13,7 @@ import {
   IconPerformance,
   IconPromoters,
   IconSettings,
+  IconTrophy,
 } from '@/components/brand/icons';
 import { useAuth } from '@/lib/auth';
 import { nameFromEmail, roleFromCapabilities } from '@/lib/format';
@@ -23,6 +24,7 @@ const NAV = [
   { href: '/campaigns', label: 'Campaigns', Icon: IconCampaigns },
   { href: '/finance', label: 'Finance', Icon: IconFinance },
   { href: '/analytics', label: 'Performance', Icon: IconPerformance },
+  { href: '/leaderboard', label: 'Leaderboard', Icon: IconTrophy },
 ];
 
 export function Sidebar({
@@ -41,6 +43,7 @@ export function Sidebar({
   const role = roleFromCapabilities(user?.capabilities);
 
   async function signOut() {
+    if (!window.confirm('Log out of the admin console?')) return;
     await logout();
     router.replace('/login');
   }

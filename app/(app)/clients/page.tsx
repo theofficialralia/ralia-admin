@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { IconDownload } from '@/components/brand/icons';
 import { ConfirmModal } from '@/components/ui/ConfirmModal';
 import { SearchInput } from '@/components/ui/SearchInput';
 import { Spinner } from '@/components/ui/Spinner';
@@ -11,6 +12,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { PageHeader } from '@/components/layout/PageHeader';
 import { api, type AdminClient } from '@/lib/api';
+import { downloadCsv } from '@/lib/csv';
 import { useAuth } from '@/lib/auth';
 import { compactNumber, relativeTime } from '@/lib/format';
 
@@ -57,12 +59,24 @@ export default function ClientsPage() {
         <div className="card grid place-items-center p-16 text-center text-muted"><div className="text-[15px] font-semibold text-ink">No clients yet</div></div>
       ) : (
         <>
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Search for a client"
-            filter={{ value: filter, onChange: setFilter, options: [{ value: 'all', label: 'All clients' }, { value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }] }}
-          />
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex-1"><SearchInput
+              value={search}
+              onChange={setSearch}
+              placeholder="Search for a client"
+              filter={{ value: filter, onChange: setFilter, options: [{ value: 'all', label: 'All clients' }, { value: 'active', label: 'Active' }, { value: 'suspended', label: 'Suspended' }] }}
+            /></div>
+            <Button
+              variant="secondary"
+              disabled={filtered.length === 0}
+              title="Download the listed clients as CSV for bulk messaging"
+              onClick={() => downloadCsv(
+                `ralia-clients-${new Date().toISOString().slice(0, 10)}`,
+                ['Business', 'Email', 'Phone', 'Industry', 'Status', 'Campaigns', 'Spent', 'Joined'],
+                filtered.map((c) => [c.name, c.email, c.phone ?? '', c.industry ?? '', c.status, c.campaigns_created, c.spent.amount_display, new Date(c.created_at).toISOString().slice(0, 10)]),
+              )}
+            ><IconDownload className="h-4 w-4" /> Export CSV</Button>
+          </div>
           <div className="card overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[720px] text-left text-[13.5px]">
@@ -86,7 +100,7 @@ export default function ClientsPage() {
                             <Avatar name={c.name} className="h-9 w-9 text-[12px]" />
                             <div>
                               <div className="font-bold text-ink">{c.name}</div>
-                              <div className="text-[12px] text-muted">{c.email}{c.industry ? ` · ${c.industry}` : ''}</div>
+                              <div className="text-[12px] text-muted">{c.email}{c.phone ? ` · ${c.phone}` : ''}{c.industry ? ` · ${c.industry}` : ''}</div>
                             </div>
                           </div>
                         </td>

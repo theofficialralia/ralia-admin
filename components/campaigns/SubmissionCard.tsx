@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { ReasonModal } from '@/components/ui/ReasonModal';
-import { IconCopy, IconExternal } from '@/components/brand/icons';
+import { IconClose, IconCopy, IconExternal, IconWarning } from '@/components/brand/icons';
 import { api, ApiError, uuid, type PendingSubmission } from '@/lib/api';
 import { compactNumber, relativeTime } from '@/lib/format';
 
@@ -16,7 +16,7 @@ import { compactNumber, relativeTime } from '@/lib/format';
  */
 export function SubmissionCard({ submission: s, canReview }: { submission: PendingSubmission; canReview: boolean }) {
   const qc = useQueryClient();
-  // A decided submission (from the campaign history) is read-only — show its verdict
+  // A decided submission (from the campaign history) is read-only - show its verdict
   // and final figures, never the review controls.
   const decided = !!s.verdict && s.verdict !== 'PENDING';
   const approved = s.verdict === 'APPROVED';
@@ -45,7 +45,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
   const ratio = s.promised_reach > 0 ? Math.min(verified / s.promised_reach, 1) : 0;
   const estPay = Math.round(s.fee.amount_minor * ratio);
-  // image_url is served by the API (/v1/files/:id) — render whenever set, fall back
+  // image_url is served by the API (/v1/files/:id) - render whenever set, fall back
   // only on a real load error.
   const hasImage = !!s.image_url && imgOk;
 
@@ -91,7 +91,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
           ) : (
             <div className="text-[22px] font-extrabold text-ink">{compactNumber(verified)}</div>
           )}
-          <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '—'} · priced for {compactNumber(s.promised_reach)}</div>
+          <div className="text-[11px] text-muted">claimed {s.claimed_views != null ? compactNumber(s.claimed_views) : '-'} · priced for {compactNumber(s.promised_reach)}</div>
         </div>
         <div className="rounded-2xl border border-rule p-3">
           <div className="text-[11px] text-muted">{decided ? (approved ? 'Paid' : 'Amount') : 'Amount to earn'}</div>
@@ -116,7 +116,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
         ) : (
           <span className="text-[12.5px] text-muted">No screenshot attached</span>
         )}
-        {s.auto_flag && <span className="absolute left-3 top-3 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white">⚠ Possible duplicate</span>}
+        {s.auto_flag && <span className="absolute left-3 top-3 inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 text-[11px] font-bold text-white"><IconWarning className="h-3.5 w-3.5" /> Possible duplicate</span>}
       </a>
 
       {/* Proof URL */}
@@ -137,7 +137,7 @@ export function SubmissionCard({ submission: s, canReview }: { submission: Pendi
 
       {reviewable && (
         <div className="mt-4 grid grid-cols-2 gap-3 border-t border-rule p-4">
-          <Button variant="danger" className="w-full" onClick={() => setRejecting(true)}>✕ Reject</Button>
+          <Button variant="danger" className="w-full" onClick={() => setRejecting(true)}><IconClose className="h-4 w-4" /> Reject</Button>
           <Button className="w-full" onClick={() => approve.mutate()} loading={approve.isPending}>Approve &amp; Pay</Button>
         </div>
       )}
